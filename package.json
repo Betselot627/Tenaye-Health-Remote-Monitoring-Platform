@@ -1,0 +1,14 @@
+{
+  "name": "rphms",
+  "version": "1.0.0",
+  "description": "Remote Patient Health Monitoring System",
+  "private": true,
+  "scripts": {
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev:backend": "npm run dev --prefix backend",
+    "install:frontend": "npm install --prefix frontend",
+    "install:backend": "npm install --prefix backend",
+    "build:frontend": "npm run build --prefix frontend"
+  },
+  "license": "MIT"
+}
