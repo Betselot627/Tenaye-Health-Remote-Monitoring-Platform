@@ -1,13 +1,9 @@
+import { useState, useEffect } from "react";
 import AdminLayout from "./components/AdminLayout";
+import { getMedicalRecordsStats, getCriticalAlerts } from "../../services/adminService";
 
 // Admin sees AGGREGATE stats and critical alerts only — NOT individual patient records
 // Individual records are owned by patients and their treating doctors (RLS enforced)
-
-const criticalAlerts = [
-  { id: 1, patient: "Bereket Tadesse", alert: "Critical SpO2: 88%", metric: "SpO2", value: "88%", doctor: "Dr. Alem Bekele", time: "2 mins ago", acknowledged: false },
-  { id: 2, patient: "Sara Haile", alert: "Blood Sugar: 210 mg/dL (Post-meal)", metric: "Blood Sugar", value: "210 mg/dL", doctor: "Dr. Tigist Worku", time: "15 mins ago", acknowledged: false },
-  { id: 3, patient: "Yonas Bekele", alert: "Heart Rate: 155 BPM", metric: "Heart Rate", value: "155 BPM", doctor: "Dr. Michael Chen", time: "1 hour ago", acknowledged: true },
-];
 
 const recordTypeBreakdown = [
   { type: "Consultation Notes", count: 12840, icon: "description", color: "text-blue-600", bg: "bg-blue-50" },
@@ -19,6 +15,31 @@ const recordTypeBreakdown = [
 ];
 
 export default function AdminMedicalRecords() {
+  const [stats, setStats] = useState(null);
+  const [criticalAlerts, setCriticalAlerts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      const [statsRes, alertsRes] = await Promise.all([
+        getMedicalRecordsStats(),
+        getCriticalAlerts(),
+      ]);
+      if (statsRes.data) setStats(statsRes.data);
+      if (alertsRes.data) setCriticalAlerts(alertsRes.data);
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  if (loading) return (
+    <AdminLayout title="Medical Records">
+      <div className="flex items-center justify-center h-64">
+        <div className="w-8 h-8 border-4 border-[#7B2D8B] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    </AdminLayout>
+  );
+
   return (
     <AdminLayout title="Medical Records">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
@@ -45,20 +66,22 @@ export default function AdminMedicalRecords() {
       </div>
 
       {/* Aggregate Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-        {[
-          { label: "Total Records", value: "45,821", color: "text-[#7B2D8B]", icon: "folder_shared" },
-          { label: "Critical Alerts", value: criticalAlerts.filter(a => !a.acknowledged).length.toString(), color: "text-red-600", bg: "bg-red-50", icon: "emergency" },
-          { label: "Records This Week", value: "892", color: "text-emerald-600", icon: "trending_up" },
-          { label: "Pending Lab Orders", value: "67", color: "text-amber-600", icon: "science" },
-        ].map((s) => (
-          <div key={s.label} className={`p-6 rounded-2xl shadow-sm ${s.bg || "bg-white"}`}>
-            <span className={`material-symbols-outlined ${s.color} mb-3 block`}>{s.icon}</span>
-            <p className={`text-3xl font-black ${s.color}`}>{s.value}</p>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-1">{s.label}</p>
-          </div>
-        ))}
-      </div>
+      {stats && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+          {[
+            { label: "Total Records", value: stats.totalRecords.toLocaleString(), color: "text-[#7B2D8B]", icon: "folder_shared" },
+            { label: "Critical Alerts", value: stats.criticalAlerts.toString(), color: "text-red-600", bg: "bg-red-50", icon: "emergency" },
+            { label: "Records This Week", value: stats.recordsThisWeek.toString(), color: "text-emerald-600", icon: "trending_up" },
+            { label: "Pending Lab Orders", value: stats.pendingLabOrders.toString(), color: "text-amber-600", icon: "science" },
+          ].map((s) => (
+            <div key={s.label} className={`p-6 rounded-2xl shadow-sm ${s.bg || "bg-white"}`}>
+              <span className={`material-symbols-outlined ${s.color} mb-3 block`}>{s.icon}</span>
+              <p className={`text-3xl font-black ${s.color}`}>{s.value}</p>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-1">{s.label}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Record Type Breakdown */}
       <div className="bg-white rounded-2xl shadow-sm p-6 mb-8">
@@ -81,14 +104,22 @@ export default function AdminMedicalRecords() {
         <div className="flex items-center gap-2 mb-2">
           <span className="material-symbols-outlined text-red-600">emergency</span>
           <h4 className="font-bold text-red-700">Critical Vital Alerts</h4>
-          <span className="ml-auto bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-            {criticalAlerts.filter(a => !a.acknowledged).length} unacknowledged
-          </span>
+          {criticalAlerts.length > 0 && (
+            <span className="ml-auto bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+              {criticalAlerts.filter(a => !a.acknowledged).length} unacknowledged
+            </span>
+          )}
         </div>
         <p className="text-xs text-red-400 mb-4">
           Doctors are automatically notified by the system. This log is for admin oversight only.
         </p>
-        <div className="space-y-3">
+        {criticalAlerts.length === 0 ? (
+          <div className="text-center py-8">
+            <span className="material-symbols-outlined text-5xl text-gray-200 block mb-3">check_circle</span>
+            <p className="text-gray-400 font-medium">No critical alerts at this time</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
           {criticalAlerts.map((alert) => (
             <div
               key={alert.id}
@@ -134,6 +165,7 @@ export default function AdminMedicalRecords() {
             </div>
           ))}
         </div>
+        )}
       </div>
     </AdminLayout>
   );

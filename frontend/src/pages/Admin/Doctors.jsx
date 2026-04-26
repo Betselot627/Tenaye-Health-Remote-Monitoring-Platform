@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AdminLayout from "./components/AdminLayout";
-import { mockDoctors, mockStats } from "./data/mockData";
+import { getDoctors } from "../../services/adminService";
 
 const statusColors = {
   approved: "bg-emerald-100 text-emerald-700",
@@ -177,10 +177,28 @@ function DoctorDetailModal({ doc, details, onClose, onApprove, onReject }) {
 
 export default function AdminDoctors() {
   const [activeTab, setActiveTab] = useState("all");
-  const [doctors, setDoctors] = useState(mockDoctors);
+  const [doctors, setDoctors] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedDoc, setSelectedDoc] = useState(null);
-  const [confirmModal, setConfirmModal] = useState(null); // { type, doc }
+  const [confirmModal, setConfirmModal] = useState(null);
   const [toast, setToast] = useState(null);
+
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await getDoctors();
+      if (data) setDoctors(data);
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  if (loading) return (
+    <AdminLayout title="Doctor Management">
+      <div className="flex items-center justify-center h-64">
+        <div className="w-8 h-8 border-4 border-[#7B2D8B] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    </AdminLayout>
+  );
 
   const filtered = doctors.filter((d) => activeTab === "all" || d.status === activeTab);
 
@@ -269,7 +287,7 @@ export default function AdminDoctors() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div className="bg-white p-6 rounded-2xl shadow-sm">
           <span className="material-symbols-outlined text-[#7B2D8B] mb-3 block">medical_services</span>
-          <p className="text-3xl font-black text-gray-800">{mockStats.activeDoctors.toLocaleString()}</p>
+          <p className="text-3xl font-black text-gray-800">{doctors.length}</p>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-1">Total Doctors</p>
         </div>
         <div className="bg-gradient-to-br from-[#7B2D8B] to-[#600f72] p-6 rounded-2xl text-white shadow-lg">

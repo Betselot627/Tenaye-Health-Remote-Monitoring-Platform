@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AdminLayout from "./components/AdminLayout";
-import { mockUsers, mockStats } from "./data/mockData";
+import { getPatients, blockUser, unblockUser } from "../../services/adminService";
 
 const statusColors = {
   active: "bg-emerald-100 text-emerald-700",
@@ -48,9 +48,27 @@ function ConfirmModal({ title, message, confirmLabel, confirmColor = "bg-red-600
 export default function AdminUsers() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [users, setUsers] = useState(mockUsers);
-  const [confirmModal, setConfirmModal] = useState(null); // { user }
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [confirmModal, setConfirmModal] = useState(null);
   const [toast, setToast] = useState(null);
+
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await getPatients();
+      if (data) setUsers(data);
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  if (loading) return (
+    <AdminLayout title="User Management">
+      <div className="flex items-center justify-center h-64">
+        <div className="w-8 h-8 border-4 border-[#7B2D8B] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    </AdminLayout>
+  );
 
   const filtered = users.filter((u) => {
     const matchSearch = u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase());
@@ -63,19 +81,19 @@ export default function AdminUsers() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  const handleBlockToggle = (user) => {
+  const handleBlockToggle = async (user) => {
     if (user.status === "blocked") {
-      // Unblock — no confirmation needed
+      await unblockUser(user.id);
       setUsers(prev => prev.map(u => u.id === user.id ? { ...u, status: "active" } : u));
       showToast(`${user.name} has been unblocked.`, "success");
     } else {
-      // Block — needs confirmation
       setConfirmModal({ user });
     }
   };
 
-  const confirmBlock = () => {
+  const confirmBlock = async () => {
     const user = confirmModal.user;
+    await blockUser(user.id);
     setUsers(prev => prev.map(u => u.id === user.id ? { ...u, status: "blocked" } : u));
     setConfirmModal(null);
     showToast(`${user.name} has been blocked.`, "error");
@@ -114,8 +132,8 @@ export default function AdminUsers() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-gradient-to-br from-[#7B2D8B] to-[#600f72] p-6 rounded-2xl text-white">
           <span className="material-symbols-outlined mb-3 block">group</span>
-          <p className="text-3xl font-black">{mockStats.totalPatients.toLocaleString()}</p>
-          <p className="text-xs font-semibold opacity-70 uppercase tracking-wider mt-1">Total Active Patients</p>
+          <p className="text-3xl font-black">{users.length.toLocaleString()}</p>
+          <p className="text-xs font-semibold opacity-70 uppercase tracking-wider mt-1">Total Patients</p>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-sm">
           <span className="material-symbols-outlined text-red-500 mb-3 block">block</span>

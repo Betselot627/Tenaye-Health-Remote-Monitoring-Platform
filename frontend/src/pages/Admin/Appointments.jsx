@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AdminLayout from "./components/AdminLayout";
-import { mockAppointments, mockStats } from "./data/mockData";
+import { getAllAppointments, cancelAppointment } from "../../services/adminService";
 
 const statusColors = {
   upcoming: "bg-blue-100 text-blue-700",
@@ -47,9 +47,27 @@ function ConfirmModal({ title, message, confirmLabel, onConfirm, onCancel }) {
 
 export default function AdminAppointments() {
   const [activeTab, setActiveTab] = useState("all");
-  const [appointments, setAppointments] = useState(mockAppointments);
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [confirmModal, setConfirmModal] = useState(null);
   const [toast, setToast] = useState(null);
+
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await getAllAppointments();
+      if (data) setAppointments(data);
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  if (loading) return (
+    <AdminLayout title="Appointments">
+      <div className="flex items-center justify-center h-64">
+        <div className="w-8 h-8 border-4 border-[#7B2D8B] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    </AdminLayout>
+  );
 
   const filtered = appointments.filter((a) => activeTab === "all" || a.status === activeTab);
 
@@ -60,8 +78,9 @@ export default function AdminAppointments() {
 
   const handleCancel = (apt) => setConfirmModal({ apt });
 
-  const confirmCancel = () => {
+  const confirmCancel = async () => {
     const apt = confirmModal.apt;
+    await cancelAppointment(apt.id);
     setAppointments(prev => prev.map(a => a.id === apt.id ? { ...a, status: "cancelled" } : a));
     setConfirmModal(null);
     showToast(`Appointment ${apt.id} has been cancelled.`, "error");
@@ -93,10 +112,10 @@ export default function AdminAppointments() {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
         {[
-          { label: "Today's Appointments", value: mockStats.appointmentsToday, color: "text-[#7B2D8B]" },
-          { label: "Upcoming", value: 1204, color: "text-blue-600" },
-          { label: "Completed", value: 8921, color: "text-emerald-600" },
-          { label: "Cancelled", value: 143, color: "text-red-500" },
+          { label: "Today's Appointments", value: appointments.filter(a => a.status === "upcoming").length + appointments.filter(a => a.status === "in_progress").length, color: "text-[#7B2D8B]" },
+          { label: "Upcoming", value: appointments.filter(a => a.status === "upcoming").length, color: "text-blue-600" },
+          { label: "Completed", value: appointments.filter(a => a.status === "completed").length, color: "text-emerald-600" },
+          { label: "Cancelled", value: appointments.filter(a => a.status === "cancelled").length, color: "text-red-500" },
         ].map((s) => (
           <div key={s.label} className="bg-white p-6 rounded-2xl shadow-sm">
             <p className={`text-3xl font-black ${s.color}`}>{s.value.toLocaleString()}</p>
@@ -130,7 +149,7 @@ export default function AdminAppointments() {
                 <th className="px-6 py-5">Doctor</th>
                 <th className="px-6 py-5">Date & Time</th>
                 <th className="px-6 py-5">Duration</th>
-                <th className="px-6 py5">Status</th>
+                <th className="px-6 py-5">Status</th>
                 <th className="px-6 py-5 text-right">Actions</th>
               </tr>
             </thead>

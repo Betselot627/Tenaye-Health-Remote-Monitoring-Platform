@@ -1,0 +1,351 @@
+/**
+ * ADMIN SERVICE
+ * 
+ * All admin-related API calls are here.
+ * Currently returns mock data.
+ * 
+ * TO INTEGRATE BACKEND:
+ * 1. Import supabase from "./supabase"
+ * 2. Replace each mock return with the real Supabase query shown in the comment above it
+ * 3. Do NOT change the function names or return shapes — pages depend on them
+ */
+
+import {
+  mockStats,
+  mockUsers,
+  mockDoctors,
+  mockAppointments,
+  mockBlogs,
+  mockPayments,
+  mockNotifications,
+  mockActivity,
+} from "../pages/Admin/data/mockData";
+
+// ─── DASHBOARD ────────────────────────────────────────────────────────────────
+
+/**
+ * BACKEND:
+ * const { count: totalPatients } = await supabase.from("profiles").select("*", { count: "exact" }).eq("role", "patient")
+ * const { count: activeDoctors } = await supabase.from("doctors").select("*", { count: "exact" }).eq("is_verified", true)
+ * const { count: appointmentsToday } = await supabase.from("appointments").select("*", { count: "exact" }).gte("scheduled_at", todayStart)
+ * const { data: revenue } = await supabase.from("payments").select("amount").eq("status", "paid")
+ */
+export const getDashboardStats = async () => {
+  return { data: mockStats, error: null };
+};
+
+/**
+ * BACKEND:
+ * const { data } = await supabase.from("appointments")
+ *   .select("id, patient:profiles(full_name), doctor:doctors(profiles(full_name)), scheduled_at, status")
+ *   .order("created_at", { ascending: false }).limit(10)
+ */
+export const getRecentActivity = async () => {
+  return { data: mockActivity, error: null };
+};
+
+// ─── USERS ────────────────────────────────────────────────────────────────────
+
+/**
+ * BACKEND:
+ * const { data } = await supabase.from("profiles")
+ *   .select("id, full_name, email, role, gender, age, created_at")
+ *   .eq("role", "patient")
+ *   .order("created_at", { ascending: false })
+ */
+export const getPatients = async () => {
+  return { data: mockUsers, error: null };
+};
+
+/**
+ * BACKEND:
+ * await supabase.auth.admin.updateUserById(userId, { ban_duration: "876600h" })
+ * // or store a "blocked" flag in profiles table
+ */
+export const blockUser = async (userId) => {
+  return { error: null };
+};
+
+/**
+ * BACKEND:
+ * await supabase.auth.admin.updateUserById(userId, { ban_duration: "none" })
+ */
+export const unblockUser = async (userId) => {
+  return { error: null };
+};
+
+// ─── DOCTORS ──────────────────────────────────────────────────────────────────
+
+/**
+ * BACKEND:
+ * const { data } = await supabase.from("doctors")
+ *   .select("*, profiles(*), doctor_applications(*)")
+ *   .order("created_at", { ascending: false })
+ */
+export const getDoctors = async () => {
+  return { data: mockDoctors, error: null };
+};
+
+/**
+ * BACKEND:
+ * const { data } = await supabase.from("doctor_applications")
+ *   .select("*")
+ *   .eq("status", "pending_review")
+ *   .order("created_at", { ascending: false })
+ */
+export const getPendingDoctorApplications = async () => {
+  return { data: mockDoctors.filter(d => d.status === "pending"), error: null };
+};
+
+/**
+ * BACKEND:
+ * // 1. Update application status
+ * await supabase.from("doctor_applications").update({ status: "approved", reviewed_by: adminId }).eq("id", applicationId)
+ * // 2. Create profiles entry for doctor
+ * await supabase.auth.admin.createUser({ email, password: tempPassword, email_confirm: true })
+ * // 3. Create doctors table entry
+ * await supabase.from("doctors").insert({ user_id: newUserId, specialty, is_verified: true, ... })
+ * // 4. Send email with credentials (via Edge Function)
+ */
+export const approveDoctor = async (doctorId) => {
+  return { error: null };
+};
+
+/**
+ * BACKEND:
+ * await supabase.from("doctor_applications")
+ *   .update({ status: "rejected", rejection_reason: reason, reviewed_by: adminId })
+ *   .eq("id", applicationId)
+ * // Then trigger Edge Function to send rejection email
+ */
+export const rejectDoctor = async (doctorId, reason) => {
+  return { error: null };
+};
+
+/**
+ * BACKEND:
+ * await supabase.from("doctors").update({ is_verified: false }).eq("id", doctorId)
+ * // Also ban their auth account temporarily
+ */
+export const suspendDoctor = async (doctorId) => {
+  return { error: null };
+};
+
+/**
+ * BACKEND:
+ * await supabase.from("doctors").update({ is_verified: true }).eq("id", doctorId)
+ * // Unban their auth account
+ */
+export const reinstateDoctor = async (doctorId) => {
+  return { error: null };
+};
+
+// ─── APPOINTMENTS ─────────────────────────────────────────────────────────────
+
+/**
+ * BACKEND:
+ * const { data } = await supabase.from("appointments")
+ *   .select("*, patient:profiles!patient_id(full_name), doctor:doctors(profiles(full_name), specialty)")
+ *   .order("scheduled_at", { ascending: false })
+ */
+export const getAllAppointments = async () => {
+  return { data: mockAppointments, error: null };
+};
+
+/**
+ * BACKEND:
+ * await supabase.from("appointments")
+ *   .update({ status: "cancelled", cancellation_reason: reason })
+ *   .eq("id", appointmentId)
+ * // Also trigger refund if payment exists
+ */
+export const cancelAppointment = async (appointmentId, reason) => {
+  return { error: null };
+};
+
+// ─── MEDICAL RECORDS ──────────────────────────────────────────────────────────
+
+/**
+ * BACKEND:
+ * const { count } = await supabase.from("health_records").select("*", { count: "exact" })
+ * const { count: alertCount } = await supabase.from("vital_alerts").select("*", { count: "exact" }).eq("acknowledged_at", null)
+ */
+export const getMedicalRecordsStats = async () => {
+  return {
+    data: {
+      totalRecords: 45821,
+      criticalAlerts: 2,
+      recordsThisWeek: 892,
+      pendingLabOrders: 67,
+    },
+    error: null,
+  };
+};
+
+/**
+ * BACKEND:
+ * const { data } = await supabase.from("vital_alerts")
+ *   .select("*, patient:profiles(full_name), doctor:doctors(profiles(full_name))")
+ *   .is("acknowledged_at", null)
+ *   .order("created_at", { ascending: false })
+ */
+export const getCriticalAlerts = async () => {
+  return {
+    data: [
+      { id: 1, patient: "Bereket Tadesse", alert: "Critical SpO2: 88%", doctor: "Dr. Alem Bekele", time: "2 mins ago", acknowledged: false },
+      { id: 2, patient: "Sara Haile", alert: "Blood Sugar: 210 mg/dL", doctor: "Dr. Tigist Worku", time: "15 mins ago", acknowledged: false },
+      { id: 3, patient: "Yonas Bekele", alert: "Heart Rate: 155 BPM", doctor: "Dr. Michael Chen", time: "1 hour ago", acknowledged: true },
+    ],
+    error: null,
+  };
+};
+
+// ─── BLOGS ────────────────────────────────────────────────────────────────────
+
+/**
+ * BACKEND:
+ * const { data } = await supabase.from("blogs")
+ *   .select("*, author:profiles(full_name, avatar_url)")
+ *   .order("created_at", { ascending: false })
+ */
+export const getAllBlogs = async () => {
+  return { data: mockBlogs, error: null };
+};
+
+/**
+ * BACKEND:
+ * await supabase.from("blogs").update({ status: "published", published_at: new Date() }).eq("id", blogId)
+ */
+export const approveBlog = async (blogId) => {
+  return { error: null };
+};
+
+/**
+ * BACKEND:
+ * await supabase.from("blogs")
+ *   .update({ status: "rejected", rejection_reason: reason, reviewed_by: adminId })
+ *   .eq("id", blogId)
+ * // Trigger Edge Function to notify author
+ */
+export const rejectBlog = async (blogId, reason) => {
+  return { error: null };
+};
+
+/**
+ * BACKEND:
+ * await supabase.from("blogs").delete().eq("id", blogId)
+ */
+export const deleteBlog = async (blogId) => {
+  return { error: null };
+};
+
+/**
+ * BACKEND:
+ * await supabase.from("blogs").insert({
+ *   author_id: adminUserId,
+ *   title, content, category,
+ *   status: "published",
+ *   published_at: new Date()
+ * })
+ */
+export const createBlog = async (blogData) => {
+  return { error: null };
+};
+
+// ─── PAYMENTS ─────────────────────────────────────────────────────────────────
+
+/**
+ * BACKEND:
+ * const { data } = await supabase.from("payments")
+ *   .select("*, patient:profiles!patient_id(full_name), doctor:doctors(profiles(full_name))")
+ *   .order("created_at", { ascending: false })
+ */
+export const getAllPayments = async () => {
+  return { data: mockPayments, error: null };
+};
+
+/**
+ * BACKEND:
+ * // Call Chapa or TeleBirr refund API via Express backend
+ * await fetch("/api/payment/refund", { method: "POST", body: JSON.stringify({ transactionId }) })
+ * // Then update local record
+ * await supabase.from("payments").update({ status: "refunded", refunded_at: new Date() }).eq("id", paymentId)
+ */
+export const processRefund = async (paymentId) => {
+  return { error: null };
+};
+
+// ─── NOTIFICATIONS ────────────────────────────────────────────────────────────
+
+/**
+ * BACKEND:
+ * const { data } = await supabase.from("notifications")
+ *   .select("*")
+ *   .order("created_at", { ascending: false })
+ *   .limit(50)
+ */
+export const getNotifications = async () => {
+  return { data: mockNotifications, error: null };
+};
+
+/**
+ * BACKEND:
+ * await supabase.from("notifications").update({ is_read: true }).eq("user_id", adminId)
+ */
+export const markAllNotificationsRead = async () => {
+  return { error: null };
+};
+
+/**
+ * BACKEND:
+ * // Insert notification for each target user
+ * // Or call Express endpoint: POST /api/notifications/broadcast
+ * await fetch("/api/notifications/send", {
+ *   method: "POST",
+ *   body: JSON.stringify({ title, message, target: "all" | "patients" | "doctors" })
+ * })
+ */
+export const sendBroadcast = async ({ title, message, target }) => {
+  return { error: null };
+};
+
+// ─── SETTINGS ─────────────────────────────────────────────────────────────────
+
+/**
+ * BACKEND:
+ * const { data } = await supabase.from("settings").select("key, value")
+ * // Convert array to object: { platformName: "RPHMS", ... }
+ */
+export const getSettings = async () => {
+  return {
+    data: {
+      platformName: "RPHMS",
+      tagline: "Remote Patient Health Monitoring System",
+      supportEmail: "support@rphms.com",
+      language: "en",
+      timezone: "Africa/Addis_Ababa",
+      jwtExpiry: "1h",
+      refreshExpiry: "7d",
+      rateLimiting: true,
+      twoFactor: false,
+      emailNotifs: true,
+      inAppNotifs: true,
+      criticalAlerts: true,
+      appointmentReminders: true,
+      reminderTime: "60",
+      currency: "ETB",
+      maxFileSize: 10,
+    },
+    error: null,
+  };
+};
+
+/**
+ * BACKEND:
+ * // Convert settings object to array of { key, value } and upsert
+ * const rows = Object.entries(settings).map(([key, value]) => ({ key, value: String(value) }))
+ * await supabase.from("settings").upsert(rows, { onConflict: "key" })
+ */
+export const saveSettings = async (settings) => {
+  return { error: null };
+};

@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AdminLayout from "./components/AdminLayout";
-import { mockPayments, mockStats } from "./data/mockData";
+import { getAllPayments, processRefund } from "../../services/adminService";
 
 const statusColors = {
   paid: "bg-emerald-100 text-emerald-700",
@@ -57,9 +57,27 @@ function RefundModal({ txn, onConfirm, onCancel }) {
 
 export default function AdminPayments() {
   const [activeTab, setActiveTab] = useState("all");
-  const [payments, setPayments] = useState(mockPayments);
+  const [payments, setPayments] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [refundModal, setRefundModal] = useState(null);
   const [toast, setToast] = useState(null);
+
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await getAllPayments();
+      if (data) setPayments(data);
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  if (loading) return (
+    <AdminLayout title="Payments & Revenue">
+      <div className="flex items-center justify-center h-64">
+        <div className="w-8 h-8 border-4 border-[#7B2D8B] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    </AdminLayout>
+  );
 
   const filtered = payments.filter((p) => activeTab === "all" || p.status === activeTab);
 
@@ -68,8 +86,9 @@ export default function AdminPayments() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  const confirmRefund = () => {
+  const confirmRefund = async () => {
     const txn = refundModal;
+    await processRefund(txn.id);
     setPayments(prev => prev.map(p => p.id === txn.id ? { ...p, status: "refunded" } : p));
     setRefundModal(null);
     showToast(`Refund of ${txn.amount} ETB processed for ${txn.patient}.`, "refund");
@@ -100,7 +119,9 @@ export default function AdminPayments() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
         <div className="bg-gradient-to-br from-[#7B2D8B] to-[#600f72] p-6 rounded-2xl text-white col-span-2 md:col-span-1">
           <span className="material-symbols-outlined mb-3 block opacity-70">payments</span>
-          <p className="text-3xl font-black">{(mockStats.totalRevenue / 1000000).toFixed(1)}M</p>
+          <p className="text-3xl font-black">
+            {(payments.filter(p => p.status === "paid").reduce((sum, p) => sum + p.amount, 0) / 1000).toFixed(0)}K
+          </p>
           <p className="text-xs font-semibold opacity-70 uppercase tracking-wider mt-1">Total Revenue (ETB)</p>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-sm">
@@ -116,7 +137,7 @@ export default function AdminPayments() {
         </div>
         <div className="bg-red-50 p-6 rounded-2xl">
           <span className="material-symbols-outlined text-red-500 mb-3 block">error</span>
-          <p className="text-3xl font-black text-red-600">{mockStats.failedPayments}</p>
+          <p className="text-3xl font-black text-red-600">{payments.filter(p => p.status === "failed").length}</p>
           <p className="text-xs font-semibold text-red-400 uppercase tracking-wider mt-1">Failed Transactions</p>
         </div>
       </div>

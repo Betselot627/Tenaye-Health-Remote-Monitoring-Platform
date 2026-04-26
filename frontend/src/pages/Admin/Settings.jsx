@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AdminLayout from "./components/AdminLayout";
+import { getSettings, saveSettings } from "../../services/adminService";
 
 function Toggle({ checked, onChange, locked = false }) {
   return (
@@ -40,37 +41,29 @@ function Field({ label, children }) {
 }
 
 export default function AdminSettings() {
-  const [settings, setSettings] = useState({
-    platformName: "RPHMS",
-    tagline: "Remote Patient Health Monitoring System",
-    supportEmail: "support@rphms.com",
-    language: "en",
-    timezone: "Africa/Addis_Ababa",
-    jwtExpiry: "1h",
-    refreshExpiry: "7d",
-    rateLimiting: true,
-    twoFactor: false,
-    emailNotifs: true,
-    inAppNotifs: true,
-    criticalAlerts: true,
-    appointmentReminders: true,
-    reminderTime: "60",
-    currency: "ETB",
-    maxFileSize: 10,
-  });
+  const [settings, setSettings] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [saveState, setSaveState] = useState("idle"); // "idle" | "saving" | "saved"
   const [dangerModal, setDangerModal] = useState(null); // "clear_notifs" | "reset_platform"
   const [resetConfirmText, setResetConfirmText] = useState("");
   const [toast, setToast] = useState(null);
 
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await getSettings();
+      if (data) setSettings(data);
+      setLoading(false);
+    };
+    load();
+  }, []);
+
   const update = (key, val) => setSettings(prev => ({ ...prev, [key]: val }));
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setSaveState("saving");
-    setTimeout(() => {
-      setSaveState("saved");
-      setTimeout(() => setSaveState("idle"), 2500);
-    }, 800);
+    await saveSettings(settings);
+    setSaveState("saved");
+    setTimeout(() => setSaveState("idle"), 2500);
   };
 
   const showToast = (message, type = "success") => {
@@ -88,6 +81,14 @@ export default function AdminSettings() {
     setResetConfirmText("");
     showToast("Platform data reset initiated.", "error");
   };
+
+  if (loading || !settings) return (
+    <AdminLayout title="Settings">
+      <div className="flex items-center justify-center h-64">
+        <div className="w-8 h-8 border-4 border-[#7B2D8B] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    </AdminLayout>
+  );
 
   return (
     <AdminLayout title="Settings">

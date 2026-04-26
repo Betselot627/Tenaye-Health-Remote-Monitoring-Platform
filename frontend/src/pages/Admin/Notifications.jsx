@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AdminLayout from "./components/AdminLayout";
-import { mockNotifications } from "./data/mockData";
+import { getNotifications, markAllNotificationsRead, sendBroadcast } from "../../services/adminService";
 
 const typeConfig = {
   vital_alert: { icon: "emergency", color: "bg-red-100 text-red-600", border: "border-red-400" },
@@ -13,7 +13,18 @@ const typeConfig = {
 export default function AdminNotifications() {
   const [activeTab, setActiveTab] = useState("all");
   const [showComposer, setShowComposer] = useState(false);
-  const [notifications, setNotifications] = useState(mockNotifications);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [broadcastData, setBroadcastData] = useState({ title: "", message: "", target: "all" });
+
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await getNotifications();
+      if (data) setNotifications(data);
+      setLoading(false);
+    };
+    load();
+  }, []);
 
   const filtered = notifications.filter((n) => {
     if (activeTab === "all") return true;
@@ -21,8 +32,27 @@ export default function AdminNotifications() {
     return n.type === activeTab;
   });
 
-  const markAllRead = () => setNotifications(notifications.map(n => ({ ...n, read: true })));
+  const markAllRead = async () => {
+    await markAllNotificationsRead();
+    setNotifications(notifications.map(n => ({ ...n, read: true })));
+  };
+
+  const handleSendBroadcast = async () => {
+    if (!broadcastData.title || !broadcastData.message) return;
+    await sendBroadcast(broadcastData);
+    setBroadcastData({ title: "", message: "", target: "all" });
+    setShowComposer(false);
+  };
+
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  if (loading) return (
+    <AdminLayout title="Notifications">
+      <div className="flex items-center justify-center h-64">
+        <div className="w-8 h-8 border-4 border-[#7B2D8B] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    </AdminLayout>
+  );
 
   return (
     <AdminLayout title="Notifications">
@@ -75,18 +105,30 @@ export default function AdminNotifications() {
             <input
               className="w-full bg-[#fdf0f9] border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-200"
               placeholder="Notification title..."
+              value={broadcastData.title}
+              onChange={(e) => setBroadcastData({ ...broadcastData, title: e.target.value })}
             />
             <textarea
               className="w-full bg-[#fdf0f9] border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-200 h-24 resize-none"
               placeholder="Message content..."
+              value={broadcastData.message}
+              onChange={(e) => setBroadcastData({ ...broadcastData, message: e.target.value })}
             />
             <div className="flex items-center gap-4">
-              <select className="bg-[#fdf0f9] border-none rounded-xl px-4 py-3 text-sm focus:outline-none flex-1">
-                <option>All Users</option>
-                <option>Patients Only</option>
-                <option>Doctors Only</option>
+              <select 
+                className="bg-[#fdf0f9] border-none rounded-xl px-4 py-3 text-sm focus:outline-none flex-1"
+                value={broadcastData.target}
+                onChange={(e) => setBroadcastData({ ...broadcastData, target: e.target.value })}
+              >
+                <option value="all">All Users</option>
+                <option value="patients">Patients Only</option>
+                <option value="doctors">Doctors Only</option>
               </select>
-              <button className="px-6 py-3 bg-[#7B2D8B] text-white rounded-full font-bold text-sm hover:bg-purple-800 transition-colors">
+              <button 
+                onClick={handleSendBroadcast}
+                disabled={!broadcastData.title || !broadcastData.message}
+                className="px-6 py-3 bg-[#7B2D8B] text-white rounded-full font-bold text-sm hover:bg-purple-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 Send Now
               </button>
               <button className="px-6 py-3 bg-[#fdf0f9] text-[#7B2D8B] rounded-full font-bold text-sm hover:bg-purple-100 transition-colors">

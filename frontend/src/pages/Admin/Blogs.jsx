@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AdminLayout from "./components/AdminLayout";
-import { mockBlogs, mockStats } from "./data/mockData";
+import { getAllBlogs, approveBlog, rejectBlog, deleteBlog, createBlog } from "../../services/adminService";
 
 const statusColors = {
   published: "bg-emerald-100 text-emerald-700",
@@ -127,10 +127,20 @@ function CreatePostModal({ onClose, onPublish }) {
 
 export default function AdminBlogs() {
   const [activeTab, setActiveTab] = useState("all");
-  const [blogs, setBlogs] = useState(mockBlogs);
+  const [blogs, setBlogs] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [rejectModal, setRejectModal] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [toast, setToast] = useState(null);
+
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await getAllBlogs();
+      if (data) setBlogs(data);
+      setLoading(false);
+    };
+    load();
+  }, []);
 
   const filtered = blogs.filter((b) => activeTab === "all" || b.status === activeTab);
 
@@ -139,23 +149,27 @@ export default function AdminBlogs() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  const handleApprove = (blog) => {
+  const handleApprove = async (blog) => {
+    await approveBlog(blog.id);
     setBlogs(prev => prev.map(b => b.id === blog.id ? { ...b, status: "published" } : b));
     showToast(`"${blog.title}" has been published.`, "success");
   };
 
-  const handleReject = (reason) => {
+  const handleReject = async (reason) => {
+    await rejectBlog(rejectModal.id, reason);
     setBlogs(prev => prev.filter(b => b.id !== rejectModal.id));
     setRejectModal(null);
     showToast(`Post rejected and author notified.`, "error");
   };
 
-  const handleDelete = (blog) => {
+  const handleDelete = async (blog) => {
+    await deleteBlog(blog.id);
     setBlogs(prev => prev.filter(b => b.id !== blog.id));
     showToast(`"${blog.title}" has been deleted.`, "error");
   };
 
-  const handlePublish = (form) => {
+  const handlePublish = async (form) => {
+    await createBlog(form);
     const newPost = {
       id: String(Date.now()),
       title: form.title,

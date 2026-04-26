@@ -1,6 +1,12 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "./components/AdminLayout";
-import { mockStats, mockActivity, mockDoctors, mockNotifications } from "./data/mockData";
+import {
+  getDashboardStats,
+  getRecentActivity,
+  getPendingDoctorApplications,
+  getNotifications,
+} from "../../services/adminService";
 
 function StatCard({ title, value, trend, trendColor = "text-emerald-600", icon, purple }) {
   return (
@@ -27,8 +33,36 @@ function StatCard({ title, value, trend, trendColor = "text-emerald-600", icon, 
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const pendingDoctors = mockDoctors.filter(d => d.status === "pending");
-  const unreadNotifs = mockNotifications.filter(n => !n.read);
+  const [stats, setStats] = useState(null);
+  const [activity, setActivity] = useState([]);
+  const [pendingDoctors, setPendingDoctors] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      const [statsRes, activityRes, doctorsRes, notifsRes] = await Promise.all([
+        getDashboardStats(),
+        getRecentActivity(),
+        getPendingDoctorApplications(),
+        getNotifications(),
+      ]);
+      if (statsRes.data) setStats(statsRes.data);
+      if (activityRes.data) setActivity(activityRes.data);
+      if (doctorsRes.data) setPendingDoctors(doctorsRes.data);
+      if (notifsRes.data) setUnreadCount(notifsRes.data.filter(n => !n.read).length);
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  if (loading) return (
+    <AdminLayout title="Dashboard">
+      <div className="flex items-center justify-center h-64">
+        <div className="w-8 h-8 border-4 border-[#7B2D8B] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    </AdminLayout>
+  );
 
   return (
     <AdminLayout title="Dashboard">
@@ -51,16 +85,18 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
-        <StatCard title="Total Patients" value={mockStats.totalPatients.toLocaleString()} trend="+8.2% vs last month" icon="group" />
-        <StatCard title="Active Doctors" value={mockStats.activeDoctors.toLocaleString()} trend="+4 new today" icon="medical_services" />
-        <StatCard title="Appointments Today" value={mockStats.appointmentsToday} trend="156 pending" trendColor="text-amber-500" icon="calendar_today" />
-        <StatCard title="Total Revenue (ETB)" value={`${(mockStats.totalRevenue / 1000000).toFixed(1)}M`} trend="+22% growth" icon="payments" purple />
-      </div>
+      {stats && (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+          <StatCard title="Total Patients" value={stats.totalPatients.toLocaleString()} trend="+8.2% vs last month" icon="group" />
+          <StatCard title="Active Doctors" value={stats.activeDoctors.toLocaleString()} trend="+4 new today" icon="medical_services" />
+          <StatCard title="Appointments Today" value={stats.appointmentsToday} trend="156 pending" trendColor="text-amber-500" icon="calendar_today" />
+          <StatCard title="Total Revenue (ETB)" value={`${(stats.totalRevenue / 1000000).toFixed(1)}M`} trend="+22% growth" icon="payments" purple />
+        </div>
+      )}
 
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left: Charts placeholder + Activity */}
+        {/* Left: Chart + Activity */}
         <div className="lg:col-span-2 space-y-6">
           {/* Chart Card */}
           <div className="bg-white p-6 rounded-2xl shadow-sm">
@@ -74,7 +110,6 @@ export default function AdminDashboard() {
                 <option>Last 30 Days</option>
               </select>
             </div>
-            {/* SVG Chart */}
             <div className="h-48 relative">
               <svg className="w-full h-full" viewBox="0 0 400 150" preserveAspectRatio="none">
                 <defs>
@@ -97,7 +132,7 @@ export default function AdminDashboard() {
             <h4 className="text-lg font-bold text-gray-800 mb-6">Recent Activity</h4>
             <div className="space-y-5 relative">
               <div className="absolute left-[11px] top-2 bottom-2 w-px bg-gray-100"></div>
-              {mockActivity.map((item) => (
+              {activity.map((item) => (
                 <div key={item.id} className="relative pl-10">
                   <div className="absolute left-0 top-1 w-6 h-6 rounded-full bg-[#fdf0f9] flex items-center justify-center border-4 border-white z-10">
                     <span className="w-2 h-2 rounded-full bg-[#7B2D8B] block"></span>
@@ -118,25 +153,35 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Right: Alerts + Doctor Queue */}
+        {/* Right: Alerts + Queue + Status */}
         <div className="space-y-6">
           {/* Critical Alerts */}
           <div className="bg-red-600 text-white p-6 rounded-2xl">
             <div className="flex items-center gap-2 mb-4">
               <span className="material-symbols-outlined">error</span>
               <h4 className="font-bold">Critical Alerts</h4>
-              <span className="ml-auto bg-white/20 text-white text-xs font-bold px-2 py-0.5 rounded-full">{unreadNotifs.length}</span>
+              <span className="ml-auto bg-white/20 text-white text-xs font-bold px-2 py-0.5 rounded-full">{unreadCount}</span>
             </div>
             <div className="space-y-3">
               <div className="bg-white/10 p-4 rounded-xl">
                 <p className="text-xs font-bold opacity-70 uppercase tracking-tighter">Emergency Vitals</p>
                 <p className="text-sm mt-1">Patient Bereket — critical SpO2: 88%. AI flagging urgent review.</p>
-                <button className="mt-2 text-xs font-bold underline">Open Medical File</button>
+                <button
+                  onClick={() => navigate("/admin/medical-records")}
+                  className="mt-2 text-xs font-bold underline"
+                >
+                  Open Medical File
+                </button>
               </div>
               <div className="bg-white/10 p-4 rounded-xl">
                 <p className="text-xs font-bold opacity-70 uppercase tracking-tighter">Server Latency</p>
                 <p className="text-sm mt-1">High response time on notification relay service.</p>
-                <button className="mt-2 text-xs font-bold underline">Investigate</button>
+                <button
+                  onClick={() => navigate("/admin/settings")}
+                  className="mt-2 text-xs font-bold underline"
+                >
+                  Investigate
+                </button>
               </div>
             </div>
           </div>
@@ -145,37 +190,43 @@ export default function AdminDashboard() {
           <div className="bg-white p-6 rounded-2xl shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <h4 className="font-bold text-gray-800">Verification Queue</h4>
-              <span className="bg-[#fdf0f9] text-[#7B2D8B] text-xs font-bold px-3 py-1 rounded-full">{pendingDoctors.length} pending</span>
+              <span className="bg-[#fdf0f9] text-[#7B2D8B] text-xs font-bold px-3 py-1 rounded-full">
+                {pendingDoctors.length} pending
+              </span>
             </div>
-            <div className="space-y-3">
-              {pendingDoctors.slice(0, 3).map((doc) => (
-                <div key={doc.id} className="p-3 bg-[#fdf0f9] rounded-xl">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#7B2D8B] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                      {doc.name.split(" ")[1]?.[0] || "D"}
+            {pendingDoctors.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-4">No pending applications</p>
+            ) : (
+              <div className="space-y-3">
+                {pendingDoctors.slice(0, 3).map((doc) => (
+                  <div key={doc.id} className="p-3 bg-[#fdf0f9] rounded-xl">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 rounded-xl bg-[#7B2D8B] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                        {doc.name.split(" ")[1]?.[0] || "D"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-gray-800 truncate">{doc.name}</p>
+                        <p className="text-xs text-gray-400">{doc.specialty}</p>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-gray-800 truncate">{doc.name}</p>
-                      <p className="text-xs text-gray-400">{doc.specialty}</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => navigate("/admin/doctors")}
+                        className="flex-1 py-1.5 bg-[#7B2D8B] text-white text-xs font-bold rounded-full hover:bg-purple-800 transition-colors active:scale-95"
+                      >
+                        Review
+                      </button>
+                      <button
+                        onClick={() => navigate("/admin/doctors")}
+                        className="flex-1 py-1.5 bg-white text-gray-600 text-xs font-bold rounded-full hover:bg-gray-50 transition-colors border border-gray-200 active:scale-95"
+                      >
+                        View All
+                      </button>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => navigate("/admin/doctors")}
-                      className="flex-1 py-1.5 bg-[#7B2D8B] text-white text-xs font-bold rounded-full hover:bg-purple-800 transition-colors active:scale-95"
-                    >
-                      Approve
-                    </button>
-                    <button
-                      onClick={() => navigate("/admin/doctors")}
-                      className="flex-1 py-1.5 bg-white text-gray-600 text-xs font-bold rounded-full hover:bg-gray-50 transition-colors border border-gray-200 active:scale-95"
-                    >
-                      Review
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* System Status */}
