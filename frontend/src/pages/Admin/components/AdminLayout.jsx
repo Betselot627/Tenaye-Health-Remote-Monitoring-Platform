@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 const navItems = [
   { path: "/admin", label: "Dashboard", icon: "grid_view" },
@@ -13,17 +13,52 @@ const navItems = [
   { path: "/admin/settings", label: "Settings", icon: "settings" },
 ];
 
+// Mock notifications for the dropdown
+const mockNotifications = [
+  { id: 1, title: "New Doctor Application", message: "Dr. Sarah Johnson applied for verification", time: "5 mins ago", type: "doctor", unread: true },
+  { id: 2, title: "Critical Vital Alert", message: "Patient Bereket - SpO2: 88%", time: "12 mins ago", type: "alert", unread: true },
+  { id: 3, title: "Payment Received", message: "1,200 ETB from Alem Tadesse", time: "1 hour ago", type: "payment", unread: false },
+  { id: 4, title: "Appointment Cancelled", message: "Appointment #APT-1234 was cancelled", time: "2 hours ago", type: "appointment", unread: false },
+];
+
 export default function AdminLayout({ children, title }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState(mockNotifications);
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
     setSidebarOpen(false);
+    setShowNotifications(false);
   }, [location.pathname]);
 
   // Close sidebar when clicking outside on mobile
   const handleOverlayClick = () => setSidebarOpen(false);
+
+  // Handle search
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      // Navigate to search results page with query parameter
+      navigate(`/admin/search?search=${encodeURIComponent(searchQuery)}`);
+      setSearchQuery(""); // Clear search after submitting
+    }
+  };
+
+  // Mark notification as read
+  const markAsRead = (id) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, unread: false } : n));
+  };
+
+  // Mark all as read
+  const markAllAsRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
+  };
+
+  const unreadCount = notifications.filter(n => n.unread).length;
 
   return (
     <div className="flex min-h-screen bg-[#fff7fa]">
@@ -118,20 +153,128 @@ export default function AdminLayout({ children, title }) {
 
           <div className="flex items-center gap-2 md:gap-4">
             {/* Search — hidden on small screens */}
-            <div className="relative hidden md:block">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+            <form onSubmit={handleSearch} className="relative hidden md:block">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none">search</span>
               <input
                 className="pl-10 pr-4 py-2 bg-[#fdf0f9] border-none rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-purple-200 w-48 lg:w-56"
                 placeholder="Search..."
                 type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
-            </div>
+            </form>
 
-            {/* Notification bell */}
-            <button className="relative p-2 rounded-full hover:bg-purple-50 transition-colors flex-shrink-0">
-              <span className="material-symbols-outlined text-gray-500">notifications</span>
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
+            {/* Notification bell with dropdown */}
+            <div className="relative">
+              <button 
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="relative p-2 rounded-full hover:bg-purple-50 transition-colors flex-shrink-0"
+              >
+                <span className="material-symbols-outlined text-gray-500">notifications</span>
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 w-5 h-5 bg-red-500 rounded-full text-white text-[10px] font-bold flex items-center justify-center">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Notification Dropdown */}
+              {showNotifications && (
+                <>
+                  {/* Backdrop for mobile */}
+                  <div 
+                    className="fixed inset-0 z-40 md:hidden" 
+                    onClick={() => setShowNotifications(false)}
+                  />
+                  
+                  <div className="absolute right-0 mt-2 w-80 md:w-96 bg-white rounded-2xl shadow-2xl z-50 max-h-[80vh] overflow-hidden flex flex-col">
+                    {/* Header */}
+                    <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+                      <div>
+                        <h3 className="font-bold text-gray-800">Notifications</h3>
+                        <p className="text-xs text-gray-400">{unreadCount} unread</p>
+                      </div>
+                      <button 
+                        onClick={markAllAsRead}
+                        className="text-xs text-[#7B2D8B] font-semibold hover:underline"
+                      >
+                        Mark all read
+                      </button>
+                    </div>
+
+                    {/* Notifications List */}
+                    <div className="overflow-y-auto flex-1">
+                      {notifications.length === 0 ? (
+                        <div className="p-8 text-center">
+                          <span className="material-symbols-outlined text-5xl text-gray-200 block mb-2">notifications_off</span>
+                          <p className="text-sm text-gray-400">No notifications</p>
+                        </div>
+                      ) : (
+                        notifications.map((notif) => (
+                          <div
+                            key={notif.id}
+                            onClick={() => {
+                              markAsRead(notif.id);
+                              setShowNotifications(false);
+                              // Navigate based on notification type
+                              if (notif.type === "doctor") navigate("/admin/doctors");
+                              else if (notif.type === "alert") navigate("/admin/medical-records");
+                              else if (notif.type === "payment") navigate("/admin/payments");
+                              else if (notif.type === "appointment") navigate("/admin/appointments");
+                            }}
+                            className={`p-4 border-b border-gray-50 hover:bg-purple-50/50 cursor-pointer transition-colors ${
+                              notif.unread ? "bg-purple-50/30" : ""
+                            }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                                notif.type === "alert" ? "bg-red-100" :
+                                notif.type === "doctor" ? "bg-purple-100" :
+                                notif.type === "payment" ? "bg-emerald-100" :
+                                "bg-blue-100"
+                              }`}>
+                                <span className={`material-symbols-outlined text-sm ${
+                                  notif.type === "alert" ? "text-red-600" :
+                                  notif.type === "doctor" ? "text-purple-600" :
+                                  notif.type === "payment" ? "text-emerald-600" :
+                                  "text-blue-600"
+                                }`}>
+                                  {notif.type === "alert" ? "emergency" :
+                                   notif.type === "doctor" ? "medical_services" :
+                                   notif.type === "payment" ? "payments" :
+                                   "calendar_today"}
+                                </span>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-bold text-gray-800 truncate">{notif.title}</p>
+                                <p className="text-xs text-gray-500 mt-0.5">{notif.message}</p>
+                                <p className="text-xs text-gray-400 mt-1">{notif.time}</p>
+                              </div>
+                              {notif.unread && (
+                                <span className="w-2 h-2 bg-[#7B2D8B] rounded-full flex-shrink-0 mt-2"></span>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    {/* Footer */}
+                    <div className="p-3 border-t border-gray-100">
+                      <button 
+                        onClick={() => {
+                          setShowNotifications(false);
+                          navigate("/admin/notifications");
+                        }}
+                        className="w-full py-2 text-sm font-semibold text-[#7B2D8B] hover:bg-purple-50 rounded-xl transition-colors"
+                      >
+                        View All Notifications
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </header>
 

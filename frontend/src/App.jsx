@@ -10,6 +10,7 @@ import AdminBlogs from "./pages/Admin/Blogs";
 import AdminPayments from "./pages/Admin/Payments";
 import AdminNotifications from "./pages/Admin/Notifications";
 import AdminSettings from "./pages/Admin/Settings";
+import AdminSearchResults from "./pages/Admin/SearchResults";
 
 // Auth
 import Login from "./pages/Auth/Login";
@@ -102,6 +103,7 @@ export default function App() {
 
         {/* Admin */}
         <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin/search" element={<AdminSearchResults />} />
         <Route path="/admin/users" element={<AdminUsers />} />
         <Route path="/admin/doctors" element={<AdminDoctors />} />
         <Route path="/admin/appointments" element={<AdminAppointments />} />
