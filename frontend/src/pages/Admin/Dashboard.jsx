@@ -33,7 +33,7 @@ export default function AdminDashboard() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
         <div>
-          <h2 className="text-3xl font-bold text-gray-800">Control Center Overview</h2>
+          <h2 className="text-3xl font-bold text-[#7B2D8B]">Control Center Overview</h2>
           <p className="text-gray-400 mt-1">System health and platform metrics for today.</p>
         </div>
         <div className="flex gap-3">
@@ -119,7 +119,7 @@ export default function AdminDashboard() {
         {/* Right: Alerts + Doctor Queue */}
         <div className="space-y-6">
           {/* Critical Alerts */}
-          <div className="bg-[#9b1e14] text-white p-6 rounded-2xl">
+          <div className="bg-red-600 text-white p-6 rounded-2xl">
             <div className="flex items-center gap-2 mb-4">
               <span className="material-symbols-outlined">error</span>
               <h4 className="font-bold">Critical Alerts</h4>

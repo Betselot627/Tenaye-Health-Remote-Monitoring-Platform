@@ -75,11 +75,10 @@ export default function AdminBlogs() {
           {filtered.length === 0 ? (
             <div className="col-span-3 py-16 text-center">
               <span className="material-symbols-outlined text-5xl text-gray-200 block mb-3">check_circle</span>
-              <p className="text-gray-400 font-medium">No flagged content — platform is clean.</p>
+              <p className="text-gray-400 font-medium">No posts in this category.</p>
             </div>
           ) : (
-            filtered.map((blog) => (
-              <div key={blog.id} className="bg-[#fdf0f9] rounded-2xl p-5 flex flex-col gap-3">
+            filtered.map((blog) => (              <div key={blog.id} className="bg-[#fdf0f9] rounded-2xl p-5 flex flex-col gap-3">
                 {/* Cover placeholder */}
                 <div className="w-full h-32 bg-gradient-to-br from-[#7B2D8B]/20 to-[#600f72]/10 rounded-xl flex items-center justify-center">
                   <span className="material-symbols-outlined text-4xl text-[#7B2D8B]/30">article</span>

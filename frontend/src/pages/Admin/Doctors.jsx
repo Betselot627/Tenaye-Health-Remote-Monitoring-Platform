@@ -36,22 +36,22 @@ export default function AdminDoctors() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div className="bg-white p-6 rounded-2xl shadow-sm">
           <span className="material-symbols-outlined text-[#7B2D8B] mb-3 block">medical_services</span>
-          <p className="text-4xl font-black text-gray-800">{mockStats.activeDoctors.toLocaleString()}</p>
+          <p className="text-3xl font-black text-gray-800">{mockStats.activeDoctors.toLocaleString()}</p>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-1">Total Doctors</p>
         </div>
         <div className="bg-gradient-to-br from-[#7B2D8B] to-[#600f72] p-6 rounded-2xl text-white shadow-lg">
           <span className="material-symbols-outlined mb-3 block opacity-70">pending_actions</span>
-          <p className="text-4xl font-black">{mockStats.pendingDoctors}</p>
+          <p className="text-3xl font-black">{mockStats.pendingDoctors}</p>
           <p className="text-xs font-semibold opacity-70 uppercase tracking-wider mt-1">Pending Approval</p>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-sm">
           <span className="material-symbols-outlined text-emerald-600 mb-3 block">verified</span>
-          <p className="text-4xl font-black text-emerald-600">1,150</p>
+          <p className="text-3xl font-black text-emerald-600">1,150</p>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-1">Active Staff</p>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-sm">
           <span className="material-symbols-outlined text-amber-500 mb-3 block">star</span>
-          <p className="text-4xl font-black text-gray-800">4.92</p>
+          <p className="text-3xl font-black text-gray-800">4.92</p>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-1">Avg Rating</p>
         </div>
       </div>
@@ -77,12 +77,12 @@ export default function AdminDoctors() {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-[#fdf0f9]/50 text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                <th className="px-8 py-5">Doctor Name</th>
+                <th className="px-6 py-5">Doctor Name</th>
                 <th className="px-6 py-5">Specialty</th>
                 <th className="px-6 py-5">Experience</th>
                 <th className="px-6 py-5">Rating</th>
                 <th className="px-6 py-5">Status</th>
-                <th className="px-8 py-5 text-right">Actions</th>
+                <th className="px-6 py-5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -96,7 +96,7 @@ export default function AdminDoctors() {
               ) : (
                 filtered.map((doc) => (
                   <tr key={doc.id} className="hover:bg-purple-50/20 transition-colors group">
-                    <td className="px-8 py-5">
+                    <td className="px-6 py-5">
                       <div className="flex items-center gap-3">
                         <div className="w-12 h-12 rounded-2xl bg-[#7B2D8B] flex items-center justify-center text-white font-bold">
                           {doc.name.split(" ")[1]?.[0] || "D"}
@@ -121,7 +121,7 @@ export default function AdminDoctors() {
                         {doc.status}
                       </span>
                     </td>
-                    <td className="px-8 py-5 text-right">
+                    <td className="px-6 py-5 text-right">
                       <div className="flex justify-end gap-2">
                         {doc.status === "pending" && (
                           <>
@@ -156,26 +156,19 @@ export default function AdminDoctors() {
         </div>
 
         {/* Pagination */}
-        <div className="px-8 py-4 bg-[#fdf0f9]/30 border-t border-gray-50 flex justify-between items-center">
+        <div className="px-6 py-4 bg-[#fdf0f9]/30 border-t border-gray-50 flex justify-between items-center">
           <p className="text-xs text-gray-400 font-semibold">Showing {filtered.length} of {mockDoctors.length} doctors</p>
           <div className="flex gap-1">
-            <button className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-white text-gray-400 transition-colors">
-              <span className="material-symbols-outlined">chevron_left</span>
+            <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white text-gray-400 transition-colors">
+              <span className="material-symbols-outlined text-sm">chevron_left</span>
             </button>
-            <button className="w-10 h-10 rounded-full flex items-center justify-center bg-[#7B2D8B] text-white font-bold text-sm">1</button>
-            <button className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-white text-gray-400 font-bold text-sm">2</button>
-            <button className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-white text-gray-400 transition-colors">
-              <span className="material-symbols-outlined">chevron_right</span>
+            <button className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#7B2D8B] text-white font-bold text-xs">1</button>
+            <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white text-gray-400 font-bold text-xs">2</button>
+            <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white text-gray-400 transition-colors">
+              <span className="material-symbols-outlined text-sm">chevron_right</span>
             </button>
           </div>
         </div>
-      </div>
-
-      {/* FAB */}
-      <div className="fixed bottom-8 right-8 z-50">
-        <button className="w-16 h-16 rounded-full bg-[#7B2D8B] text-white flex items-center justify-center shadow-2xl shadow-purple-400/40 hover:scale-110 active:scale-95 transition-all group">
-          <span className="material-symbols-outlined text-3xl group-hover:rotate-90 transition-transform">add</span>
-        </button>
       </div>
     </AdminLayout>
   );

@@ -23,9 +23,6 @@ export default function AdminUsers() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
         <div>
-          <nav className="flex text-xs font-medium text-gray-400 mb-2 gap-2 uppercase tracking-widest">
-            <span>Admin</span><span>/</span><span className="text-[#7B2D8B]">User Management</span>
-          </nav>
           <h2 className="text-3xl font-black text-[#7B2D8B]">Patient Directory</h2>
         </div>
         <button className="flex items-center gap-2 px-6 py-3 bg-[#7B2D8B] text-white rounded-full font-bold shadow-lg shadow-purple-200 hover:bg-purple-800 transition-colors active:scale-95">

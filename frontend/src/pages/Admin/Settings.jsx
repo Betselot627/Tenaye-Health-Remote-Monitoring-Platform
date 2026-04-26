@@ -1,11 +1,15 @@
 import { useState } from "react";
 import AdminLayout from "./components/AdminLayout";
 
-function Toggle({ checked, onChange }) {
+function Toggle({ checked, onChange, locked = false }) {
   return (
     <button
-      onClick={() => onChange(!checked)}
-      className={`relative w-12 h-6 rounded-full transition-colors ${checked ? "bg-[#7B2D8B]" : "bg-gray-200"}`}
+      onClick={() => !locked && onChange(!checked)}
+      disabled={locked}
+      title={locked ? "This setting cannot be changed" : undefined}
+      className={`relative w-12 h-6 rounded-full transition-colors
+        ${locked ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
+        ${checked ? "bg-[#7B2D8B]" : "bg-gray-200"}`}
     >
       <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${checked ? "translate-x-7" : "translate-x-1"}`}></span>
     </button>
@@ -136,15 +140,19 @@ export default function AdminSettings() {
           {[
             { key: "emailNotifs", label: "Email Notifications", desc: "Send email for appointments and alerts" },
             { key: "inAppNotifs", label: "In-App Notifications", desc: "Real-time in-app notification delivery" },
-            { key: "criticalAlerts", label: "Critical Vital Alerts", desc: "Always on — cannot be disabled", locked: true },
-            { key: "appointmentReminders", label: "Appointment Reminders", desc: "Send reminder before scheduled appointments" },
+            { key: "criticalAlerts", label: "Critical Vital Alerts", desc: "Always on — cannot be disabled", locked: true },            { key: "appointmentReminders", label: "Appointment Reminders", desc: "Send reminder before scheduled appointments" },
           ].map((item) => (
             <div key={item.key} className="flex items-center justify-between py-3 border-b border-gray-50 last:border-0">
               <div>
-                <p className="text-sm font-semibold text-gray-700">{item.label}</p>
+                <p className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                  {item.label}
+                  {item.locked && (
+                    <span className="material-symbols-outlined text-sm text-gray-400" title="Cannot be disabled">lock</span>
+                  )}
+                </p>
                 <p className="text-xs text-gray-400">{item.desc}</p>
               </div>
-              <Toggle checked={settings[item.key]} onChange={item.locked ? () => {} : v => update(item.key, v)} />
+              <Toggle checked={settings[item.key]} onChange={item.locked ? () => {} : v => update(item.key, v)} locked={item.locked} />
             </div>
           ))}
           <Field label="Reminder Time (minutes before)">
