@@ -274,7 +274,7 @@ export default function AdminSettings() {
 
         {/* Payment */}
         <SectionCard title="Payment Settings" icon="payments">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
             <Field label="Default Currency">
               <select className="bg-[#fdf0f9] border-none rounded-xl px-4 py-3 text-sm focus:outline-none" value={settings.currency} onChange={e => update("currency", e.target.value)}>
                 <option value="ETB">ETB — Ethiopian Birr</option>
@@ -283,21 +283,21 @@ export default function AdminSettings() {
             </Field>
           </div>
           <Field label="Chapa Secret Key">
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <input type="password" className="flex-1 bg-[#fdf0f9] border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-200" placeholder="CHASECK-..." />
               <button className="px-4 py-3 bg-[#fdf0f9] text-[#7B2D8B] rounded-xl text-sm font-bold hover:bg-purple-100 transition-colors whitespace-nowrap">Test Connection</button>
             </div>
           </Field>
           <Field label="TeleBirr App ID">
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <input className="flex-1 bg-[#fdf0f9] border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-200" placeholder="App ID..." />
               <button className="px-4 py-3 bg-[#fdf0f9] text-[#7B2D8B] rounded-xl text-sm font-bold hover:bg-purple-100 transition-colors whitespace-nowrap">Test Connection</button>
             </div>
           </Field>
           <Field label="Webhook URL">
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <input readOnly className="flex-1 bg-gray-50 border-none rounded-xl px-4 py-3 text-sm text-gray-400" value="https://api.rphms.com/api/payment/webhook" />
-              <button className="px-4 py-3 bg-[#fdf0f9] text-[#7B2D8B] rounded-xl text-sm font-bold hover:bg-purple-100 transition-colors">
+              <button className="px-4 py-3 bg-[#fdf0f9] text-[#7B2D8B] rounded-xl text-sm font-bold hover:bg-purple-100 transition-colors whitespace-nowrap">
                 <span className="material-symbols-outlined text-lg">content_copy</span>
               </button>
             </div>

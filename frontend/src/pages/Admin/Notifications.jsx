@@ -79,29 +79,29 @@ export default function AdminNotifications() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-2xl shadow-sm">
-          <p className="text-3xl font-black text-gray-800">1,284</p>
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-1">Total Sent Today</p>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-8">
+        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm">
+          <p className="text-2xl sm:text-3xl font-black text-gray-800">1,284</p>
+          <p className="text-[10px] sm:text-xs font-semibold text-gray-400 uppercase tracking-wider mt-1">Total Sent Today</p>
         </div>
-        <div className="bg-red-50 p-6 rounded-2xl">
-          <p className="text-3xl font-black text-red-600">{unreadCount}</p>
-          <p className="text-xs font-semibold text-red-400 uppercase tracking-wider mt-1">Unread System Alerts</p>
+        <div className="bg-red-50 p-4 sm:p-6 rounded-2xl">
+          <p className="text-2xl sm:text-3xl font-black text-red-600">{unreadCount}</p>
+          <p className="text-[10px] sm:text-xs font-semibold text-red-400 uppercase tracking-wider mt-1">Unread Alerts</p>
         </div>
-        <div className="bg-white p-6 rounded-2xl shadow-sm">
-          <p className="text-3xl font-black text-gray-800">342</p>
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-1">Email Notifications</p>
+        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm">
+          <p className="text-2xl sm:text-3xl font-black text-gray-800">342</p>
+          <p className="text-[10px] sm:text-xs font-semibold text-gray-400 uppercase tracking-wider mt-1">Email Notifs</p>
         </div>
       </div>
 
       {/* Broadcast Composer */}
       {showComposer && (
-        <div className="bg-white rounded-2xl shadow-sm p-6 mb-8 border border-[#7B2D8B]/20">
+        <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-6 mb-8 border border-[#7B2D8B]/20">
           <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
             <span className="material-symbols-outlined text-[#7B2D8B]">campaign</span>
             Broadcast Message
           </h4>
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <input
               className="w-full bg-[#fdf0f9] border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-200"
               placeholder="Notification title..."
@@ -109,12 +109,12 @@ export default function AdminNotifications() {
               onChange={(e) => setBroadcastData({ ...broadcastData, title: e.target.value })}
             />
             <textarea
-              className="w-full bg-[#fdf0f9] border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-200 h-24 resize-none"
+              className="w-full bg-[#fdf0f9] border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-200 h-20 sm:h-24 resize-none"
               placeholder="Message content..."
               value={broadcastData.message}
               onChange={(e) => setBroadcastData({ ...broadcastData, message: e.target.value })}
             />
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
               <select 
                 className="bg-[#fdf0f9] border-none rounded-xl px-4 py-3 text-sm focus:outline-none flex-1"
                 value={broadcastData.target}
@@ -127,11 +127,11 @@ export default function AdminNotifications() {
               <button 
                 onClick={handleSendBroadcast}
                 disabled={!broadcastData.title || !broadcastData.message}
-                className="px-6 py-3 bg-[#7B2D8B] text-white rounded-full font-bold text-sm hover:bg-purple-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 sm:px-6 py-3 bg-[#7B2D8B] text-white rounded-full font-bold text-sm hover:bg-purple-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
               >
                 Send Now
               </button>
-              <button className="px-6 py-3 bg-[#fdf0f9] text-[#7B2D8B] rounded-full font-bold text-sm hover:bg-purple-100 transition-colors">
+              <button className="px-4 sm:px-6 py-3 bg-[#fdf0f9] text-[#7B2D8B] rounded-full font-bold text-sm hover:bg-purple-100 transition-colors whitespace-nowrap">
                 Schedule
               </button>
             </div>
@@ -157,9 +157,9 @@ export default function AdminNotifications() {
 
         <div className="divide-y divide-gray-50">
           {filtered.length === 0 ? (
-            <div className="py-16 text-center">
-              <span className="material-symbols-outlined text-5xl text-gray-200 block mb-3">notifications_off</span>
-              <p className="text-gray-400 font-medium">No notifications in this category</p>
+            <div className="py-12 sm:py-16 text-center">
+              <span className="material-symbols-outlined text-4xl sm:text-5xl text-gray-200 block mb-2 sm:mb-3">notifications_off</span>
+              <p className="text-sm sm:text-base text-gray-400 font-medium">No notifications in this category</p>
             </div>
           ) : (
             filtered.map((notif) => {
@@ -167,30 +167,30 @@ export default function AdminNotifications() {
               return (
                 <div
                   key={notif.id}
-                  className={`flex items-start gap-4 p-5 hover:bg-purple-50/20 transition-colors ${!notif.read ? "border-l-4 " + config.border : ""}`}
+                  className={`flex items-start gap-3 sm:gap-4 p-3 sm:p-5 hover:bg-purple-50/20 transition-colors ${!notif.read ? "border-l-4 " + config.border : ""}`}
                 >
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${config.color}`}>
-                    <span className="material-symbols-outlined text-lg">{config.icon}</span>
+                  <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${config.color}`}>
+                    <span className="material-symbols-outlined text-sm sm:text-lg">{config.icon}</span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start justify-between gap-2 sm:gap-4">
                       <div>
-                        <p className={`text-sm font-bold ${notif.read ? "text-gray-600" : "text-gray-800"}`}>{notif.title}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">{notif.message}</p>
-                        <p className="text-xs text-gray-300 mt-1">To: {notif.recipient}</p>
+                        <p className={`text-xs sm:text-sm font-bold ${notif.read ? "text-gray-600" : "text-gray-800"}`}>{notif.title}</p>
+                        <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">{notif.message}</p>
+                        <p className="text-[10px] sm:text-xs text-gray-300 mt-1">To: {notif.recipient}</p>
                       </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <span className="text-xs text-gray-300 whitespace-nowrap">{notif.time}</span>
-                        {!notif.read && <span className="w-2 h-2 bg-[#7B2D8B] rounded-full"></span>}
+                      <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                        <span className="text-[10px] sm:text-xs text-gray-300 whitespace-nowrap">{notif.time}</span>
+                        {!notif.read && <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-[#7B2D8B] rounded-full"></span>}
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-1 flex-shrink-0">
-                    <button className="p-2 text-[#7B2D8B] hover:bg-purple-50 rounded-lg transition-colors">
-                      <span className="material-symbols-outlined text-lg">visibility</span>
+                  <div className="flex gap-0.5 sm:gap-1 flex-shrink-0">
+                    <button className="p-1.5 sm:p-2 text-[#7B2D8B] hover:bg-purple-50 rounded-lg transition-colors">
+                      <span className="material-symbols-outlined text-base sm:text-xl">visibility</span>
                     </button>
-                    <button className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-colors">
-                      <span className="material-symbols-outlined text-lg">delete</span>
+                    <button className="p-1.5 sm:p-2 text-red-400 hover:bg-red-50 rounded-lg transition-colors">
+                      <span className="material-symbols-outlined text-base sm:text-xl">delete</span>
                     </button>
                   </div>
                 </div>
@@ -199,16 +199,16 @@ export default function AdminNotifications() {
           )}
         </div>
 
-        <div className="px-6 py-4 bg-[#fdf0f9]/30 border-t border-gray-50 flex justify-between items-center">
-          <p className="text-xs text-gray-400 font-medium">Showing {filtered.length} notifications</p>
-          <div className="flex gap-1">
-            <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white text-gray-400 transition-colors">
-              <span className="material-symbols-outlined text-sm">chevron_left</span>
+        <div className="px-4 sm:px-6 py-3 sm:py-4 bg-[#fdf0f9]/30 border-t border-gray-50 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="text-[10px] sm:text-xs text-gray-400 font-medium">Showing {filtered.length} notifications</p>
+          <div className="flex gap-0.5 sm:gap-1">
+            <button className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg hover:bg-white text-gray-400 transition-colors">
+              <span className="material-symbols-outlined text-xs sm:text-sm">chevron_left</span>
             </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#7B2D8B] text-white font-bold text-xs">1</button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white text-gray-400 font-bold text-xs">2</button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white text-gray-400 transition-colors">
-              <span className="material-symbols-outlined text-sm">chevron_right</span>
+            <button className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg bg-[#7B2D8B] text-white font-bold text-xs">1</button>
+            <button className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg hover:bg-white text-gray-400 font-bold text-xs">2</button>
+            <button className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg hover:bg-white text-gray-400 transition-colors">
+              <span className="material-symbols-outlined text-xs sm:text-sm">chevron_right</span>
             </button>
           </div>
         </div>
