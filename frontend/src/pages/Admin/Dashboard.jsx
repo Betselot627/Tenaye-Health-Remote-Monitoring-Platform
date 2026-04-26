@@ -335,7 +335,7 @@ export default function AdminDashboard() {
         {/* Right: Alerts + Queue + Status */}
         <div className="space-y-6">
           {/* Critical Alerts */}
-          <div className="bg-gradient-to-br from-red-600 to-red-700 text-white p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] border-2 border-red-500">
+          <div className="bg-gradient-to-br from-red-800 to-red-700 text-white p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] border-2 border-red-500">
             <div className="flex items-center gap-2 mb-4">
               <span className="material-symbols-outlined animate-pulse">error</span>
               <h4 className="font-bold text-lg">Critical Alerts</h4>
