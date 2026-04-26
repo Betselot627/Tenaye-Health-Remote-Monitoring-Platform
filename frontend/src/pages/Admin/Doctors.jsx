@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import AdminLayout from "./components/AdminLayout";
 import { getDoctors } from "../../services/adminService";
+import { exportDoctors } from "../../utils/exportUtils";
 
 const statusColors = {
   approved: "bg-emerald-100 text-emerald-700",
@@ -278,7 +279,10 @@ export default function AdminDoctors() {
           <h2 className="text-3xl font-black text-[#7B2D8B]">Doctor Management</h2>
           <p className="text-gray-400 mt-1">Verification pipeline and practitioner directory</p>
         </div>
-        <button className="px-6 py-3 rounded-full border border-gray-200 text-[#7B2D8B] font-semibold text-sm hover:bg-[#fdf0f9] transition-colors">
+        <button 
+          onClick={() => exportDoctors(doctors)}
+          className="px-6 py-3 rounded-full border border-gray-200 text-[#7B2D8B] font-semibold text-sm hover:bg-[#fdf0f9] transition-colors"
+        >
           Export CSV
         </button>
       </div>

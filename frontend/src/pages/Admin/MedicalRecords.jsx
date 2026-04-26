@@ -47,10 +47,6 @@ export default function AdminMedicalRecords() {
           <h2 className="text-3xl font-black text-[#7B2D8B]">Medical Records Oversight</h2>
           <p className="text-gray-400 mt-1">Platform-wide health data statistics and critical alert monitoring</p>
         </div>
-        <button className="flex items-center gap-2 px-6 py-3 bg-[#fdf0f9] text-[#7B2D8B] rounded-full font-bold hover:bg-purple-100 transition-colors">
-          <span className="material-symbols-outlined text-sm">download</span>
-          Export Report
-        </button>
       </div>
 
       {/* Privacy Notice */}

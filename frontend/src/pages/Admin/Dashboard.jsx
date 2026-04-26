@@ -7,6 +7,7 @@ import {
   getPendingDoctorApplications,
   getNotifications,
 } from "../../services/adminService";
+import { exportDashboardReport } from "../../utils/exportUtils";
 
 function StatCard({ title, value, trend, trendColor = "text-emerald-600", icon, purple }) {
   return (
@@ -77,7 +78,10 @@ export default function AdminDashboard() {
             <span className="material-symbols-outlined text-sm">filter_list</span>
             Filter Range
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-[#7B2D8B] text-white rounded-full text-sm font-semibold shadow-lg shadow-purple-200 hover:bg-purple-800 transition-colors">
+          <button 
+            onClick={() => exportDashboardReport(stats, activity)}
+            className="flex items-center gap-2 px-4 py-2 bg-[#7B2D8B] text-white rounded-full text-sm font-semibold shadow-lg shadow-purple-200 hover:bg-purple-800 transition-colors"
+          >
             <span className="material-symbols-outlined text-sm">download</span>
             Export Report
           </button>

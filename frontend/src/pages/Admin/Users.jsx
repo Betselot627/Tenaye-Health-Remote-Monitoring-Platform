@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import AdminLayout from "./components/AdminLayout";
 import { getPatients, blockUser, unblockUser } from "../../services/adminService";
+import { exportUsers } from "../../utils/exportUtils";
 
 const statusColors = {
   active: "bg-emerald-100 text-emerald-700",
@@ -122,7 +123,10 @@ export default function AdminUsers() {
           <h2 className="text-3xl font-black text-[#7B2D8B]">Patient Directory</h2>
           <p className="text-gray-400 mt-1">Manage and monitor patient accounts</p>
         </div>
-        <button className="flex items-center gap-2 px-6 py-3 bg-[#fdf0f9] text-[#7B2D8B] rounded-full font-bold hover:bg-purple-100 transition-colors">
+        <button 
+          onClick={() => exportUsers(users)}
+          className="flex items-center gap-2 px-6 py-3 bg-[#fdf0f9] text-[#7B2D8B] rounded-full font-bold hover:bg-purple-100 transition-colors"
+        >
           <span className="material-symbols-outlined text-sm">download</span>
           Export CSV
         </button>

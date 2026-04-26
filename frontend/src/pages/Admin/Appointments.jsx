@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import AdminLayout from "./components/AdminLayout";
 import { getAllAppointments, cancelAppointment } from "../../services/adminService";
+import { exportAppointments } from "../../utils/exportUtils";
 
 const statusColors = {
   upcoming: "bg-blue-100 text-blue-700",
@@ -103,7 +104,10 @@ export default function AdminAppointments() {
           <h2 className="text-3xl font-black text-[#7B2D8B]">Appointments</h2>
           <p className="text-gray-400 mt-1">All scheduled and completed consultations</p>
         </div>
-        <button className="flex items-center gap-2 px-6 py-3 bg-[#fdf0f9] text-[#7B2D8B] rounded-full font-bold hover:bg-purple-100 transition-colors">
+        <button 
+          onClick={() => exportAppointments(appointments)}
+          className="flex items-center gap-2 px-6 py-3 bg-[#fdf0f9] text-[#7B2D8B] rounded-full font-bold hover:bg-purple-100 transition-colors"
+        >
           <span className="material-symbols-outlined text-sm">download</span>
           Export
         </button>

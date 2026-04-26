@@ -349,3 +349,74 @@ export const getSettings = async () => {
 export const saveSettings = async (settings) => {
   return { error: null };
 };
+
+// ─── EXPORT FUNCTIONS (Backend Ready) ─────────────────────────────────────────
+
+/**
+ * BACKEND:
+ * const { data } = await supabase.from("profiles")
+ *   .select("id, full_name, email, role, gender, age, created_at")
+ *   .eq("role", "patient")
+ */
+export const exportUsers = async () => {
+  const { data } = await getPatients();
+  return data;
+};
+
+/**
+ * BACKEND:
+ * const { data } = await supabase.from("doctors")
+ *   .select("*, profiles(*), doctor_applications(*)")
+ */
+export const exportDoctors = async () => {
+  const { data } = await getDoctors();
+  return data;
+};
+
+/**
+ * BACKEND:
+ * const { data } = await supabase.from("appointments")
+ *   .select("*, patient:profiles!patient_id(full_name), doctor:doctors(profiles(full_name))")
+ */
+export const exportAppointments = async () => {
+  const { data } = await getAllAppointments();
+  return data;
+};
+
+/**
+ * BACKEND:
+ * const { data } = await supabase.from("payments")
+ *   .select("*, patient:profiles!patient_id(full_name), doctor:doctors(profiles(full_name))")
+ */
+export const exportPayments = async () => {
+  const { data } = await getAllPayments();
+  return data;
+};
+
+/**
+ * BACKEND:
+ * const { data } = await supabase.from("blogs")
+ *   .select("*, author:profiles(full_name, avatar_url)")
+ */
+export const exportBlogs = async () => {
+  const { data } = await getAllBlogs();
+  return data;
+};
+
+/**
+ * BACKEND:
+ * const { count: totalPatients } = await supabase.from("profiles").select("*", { count: "exact" }).eq("role", "patient")
+ * const { count: activeDoctors } = await supabase.from("doctors").select("*", { count: "exact" }).eq("is_verified", true)
+ * const { count: appointmentsToday } = await supabase.from("appointments").select("*", { count: "exact" }).gte("scheduled_at", todayStart)
+ * const { data: revenue } = await supabase.from("payments").select("amount").eq("status", "paid")
+ * const { data: activity } = await supabase.from("appointments")
+ *   .select("id, patient:profiles(full_name), doctor:doctors(profiles(full_name)), scheduled_at, status")
+ *   .order("created_at", { ascending: false }).limit(10)
+ */
+export const exportDashboardReport = async () => {
+  const [statsRes, activityRes] = await Promise.all([
+    getDashboardStats(),
+    getRecentActivity(),
+  ]);
+  return { stats: statsRes.data, activity: activityRes.data };
+};

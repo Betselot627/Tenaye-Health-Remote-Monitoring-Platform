@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import AdminLayout from "./components/AdminLayout";
 import { getAllBlogs, approveBlog, rejectBlog, deleteBlog, createBlog } from "../../services/adminService";
+import { exportBlogs } from "../../utils/exportUtils";
 
 const statusColors = {
   published: "bg-emerald-100 text-emerald-700",
@@ -206,13 +207,22 @@ export default function AdminBlogs() {
           <h2 className="text-3xl font-black text-[#7B2D8B]">Blog Management</h2>
           <p className="text-gray-400 mt-1">Health content moderation and publishing</p>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-6 py-3 bg-[#7B2D8B] text-white rounded-full font-bold shadow-lg shadow-purple-200 hover:bg-purple-800 transition-colors active:scale-95"
-        >
-          <span className="material-symbols-outlined text-sm">edit</span>
-          Create New Post
-        </button>
+        <div className="flex gap-3">
+          <button 
+            onClick={() => exportBlogs(blogs)}
+            className="flex items-center gap-2 px-6 py-3 bg-[#fdf0f9] text-[#7B2D8B] rounded-full font-bold hover:bg-purple-100 transition-colors"
+          >
+            <span className="material-symbols-outlined text-sm">download</span>
+            Export CSV
+          </button>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 px-6 py-3 bg-[#7B2D8B] text-white rounded-full font-bold shadow-lg shadow-purple-200 hover:bg-purple-800 transition-colors active:scale-95"
+          >
+            <span className="material-symbols-outlined text-sm">edit</span>
+            Create New Post
+          </button>
+        </div>
       </div>
 
       {/* Stats */}

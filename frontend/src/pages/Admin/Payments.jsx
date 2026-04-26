@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import AdminLayout from "./components/AdminLayout";
 import { getAllPayments, processRefund } from "../../services/adminService";
+import { exportPayments } from "../../utils/exportUtils";
 
 const statusColors = {
   paid: "bg-emerald-100 text-emerald-700",
@@ -109,7 +110,10 @@ export default function AdminPayments() {
           <h2 className="text-3xl font-black text-[#7B2D8B]">Payments & Revenue</h2>
           <p className="text-gray-400 mt-1">Financial overview and transaction management</p>
         </div>
-        <button className="flex items-center gap-2 px-6 py-3 bg-[#fdf0f9] text-[#7B2D8B] rounded-full font-bold hover:bg-purple-100 transition-colors">
+        <button 
+          onClick={() => exportPayments(payments)}
+          className="flex items-center gap-2 px-6 py-3 bg-[#fdf0f9] text-[#7B2D8B] rounded-full font-bold hover:bg-purple-100 transition-colors"
+        >
           <span className="material-symbols-outlined text-sm">download</span>
           Export Report
         </button>
