@@ -39,6 +39,50 @@ export default function AdminDashboard() {
   const [pendingDoctors, setPendingDoctors] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [dateRange, setDateRange] = useState("last_7_days");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  const dateRangeOptions = [
+    { value: "last_7_days", label: "Last 7 Days" },
+    { value: "last_30_days", label: "Last 30 Days" },
+    { value: "this_month", label: "This Month" },
+    { value: "last_month", label: "Last Month" },
+    { value: "custom", label: "Custom Range" },
+  ];
+
+  const getDatesForRange = (range) => {
+    const now = new Date();
+    let start, end;
+
+    switch (range) {
+      case "last_7_days":
+        end = now;
+        start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case "last_30_days":
+        end = now;
+        start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+      case "this_month":
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = now;
+        break;
+      case "last_month":
+        start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        end = new Date(now.getFullYear(), now.getMonth(), 0);
+        break;
+      default:
+        start = new Date();
+        end = now;
+    }
+
+    return {
+      start: start.toISOString().split('T')[0],
+      end: end.toISOString().split('T')[0],
+    };
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -57,6 +101,32 @@ export default function AdminDashboard() {
     load();
   }, []);
 
+  const handleDateRangeChange = (range) => {
+    setDateRange(range);
+    if (range === "custom") {
+      // Keep current dates or set defaults
+    } else {
+      const { start, end } = getDatesForRange(range);
+      setStartDate(start);
+      setEndDate(end);
+    }
+  };
+
+  const handleApplyFilter = () => {
+    setShowFilterModal(false);
+    // In a real app, this would fetch filtered data from backend
+    // For now, just close the modal
+  };
+
+  const handleCancelFilter = () => {
+    setShowFilterModal(false);
+    // Reset to last 7 days
+    const { start, end } = getDatesForRange("last_7_days");
+    setStartDate(start);
+    setEndDate(end);
+    setDateRange("last_7_days");
+  };
+
   if (loading) return (
     <AdminLayout title="Dashboard">
       <div className="flex items-center justify-center h-64">
@@ -74,10 +144,82 @@ export default function AdminDashboard() {
           <p className="text-gray-400 mt-1">System health and platform metrics for today.</p>
         </div>
         <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 bg-[#fdf0f9] text-[#7B2D8B] rounded-full text-sm font-semibold hover:bg-purple-100 transition-colors">
-            <span className="material-symbols-outlined text-sm">filter_list</span>
-            Filter Range
-          </button>
+          <div className="relative">
+            <button 
+              onClick={() => setShowFilterModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-[#fdf0f9] text-[#7B2D8B] rounded-full text-sm font-semibold hover:bg-purple-100 transition-colors"
+            >
+              <span className="material-symbols-outlined text-sm">filter_list</span>
+              Filter Range
+            </button>
+            
+            {/* Filter Modal */}
+            {showFilterModal && (
+              <>
+                <div 
+                  className="fixed inset-0 bg-black/50 z-[60]"
+                  onClick={() => setShowFilterModal(false)}
+                />
+                <div className="fixed inset-0 flex items-center justify-center p-4 z-[70]">
+                  <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+                    <h3 className="text-lg font-bold text-gray-800 mb-4">Filter Dashboard Data</h3>
+                    
+                    <div className="space-y-4 mb-6">
+                      <label className="text-xs font-bold uppercase tracking-wider text-gray-400">Date Range</label>
+                      <select 
+                        className="w-full bg-[#fdf0f9] border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-200"
+                        value={dateRange}
+                        onChange={(e) => handleDateRangeChange(e.target.value)}
+                      >
+                        {dateRangeOptions.map((opt) => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                      
+                      {dateRange === "custom" && (
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-xs font-semibold text-gray-600 mb-1 block">Start Date</label>
+                            <input 
+                              type="date" 
+                              className="w-full bg-[#fdf0f9] border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-200"
+                              value={startDate}
+                              onChange={(e) => setStartDate(e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-semibold text-gray-600 mb-1 block">End Date</label>
+                            <input 
+                              type="date" 
+                              className="w-full bg-[#fdf0f9] border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-200"
+                              value={endDate}
+                              onChange={(e) => setEndDate(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex gap-3">
+                      <button 
+                        onClick={handleCancelFilter}
+                        className="flex-1 px-4 py-3 bg-gray-100 text-gray-600 rounded-xl font-semibold text-sm hover:bg-gray-200 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        onClick={handleApplyFilter}
+                        className="flex-1 px-4 py-3 bg-[#7B2D8B] text-white rounded-xl font-bold text-sm hover:bg-purple-800 transition-colors"
+                      >
+                        Apply Filter
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+          
           <button 
             onClick={() => exportDashboardReport(stats, activity)}
             className="flex items-center gap-2 px-4 py-2 bg-[#7B2D8B] text-white rounded-full text-sm font-semibold shadow-lg shadow-purple-200 hover:bg-purple-800 transition-colors"
