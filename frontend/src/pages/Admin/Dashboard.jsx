@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import AdminLayout from "./components/AdminLayout";
 import { mockStats, mockActivity, mockDoctors, mockNotifications } from "./data/mockData";
 
@@ -25,6 +26,7 @@ function StatCard({ title, value, trend, trendColor = "text-emerald-600", icon, 
 }
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
   const pendingDoctors = mockDoctors.filter(d => d.status === "pending");
   const unreadNotifs = mockNotifications.filter(n => !n.read);
 
@@ -147,19 +149,29 @@ export default function AdminDashboard() {
             </div>
             <div className="space-y-3">
               {pendingDoctors.slice(0, 3).map((doc) => (
-                <div key={doc.id} className="flex items-center justify-between p-3 bg-[#fdf0f9] rounded-xl group">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#7B2D8B] flex items-center justify-center text-white font-bold text-sm">
+                <div key={doc.id} className="p-3 bg-[#fdf0f9] rounded-xl">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#7B2D8B] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
                       {doc.name.split(" ")[1]?.[0] || "D"}
                     </div>
-                    <div>
-                      <p className="text-sm font-bold text-gray-800">{doc.name}</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-gray-800 truncate">{doc.name}</p>
                       <p className="text-xs text-gray-400">{doc.specialty}</p>
                     </div>
                   </div>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button className="px-3 py-1 bg-[#7B2D8B] text-white text-xs font-bold rounded-full">Approve</button>
-                    <button className="px-3 py-1 bg-gray-100 text-gray-500 text-xs font-bold rounded-full">Review</button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => navigate("/admin/doctors")}
+                      className="flex-1 py-1.5 bg-[#7B2D8B] text-white text-xs font-bold rounded-full hover:bg-purple-800 transition-colors active:scale-95"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => navigate("/admin/doctors")}
+                      className="flex-1 py-1.5 bg-white text-gray-600 text-xs font-bold rounded-full hover:bg-gray-50 transition-colors border border-gray-200 active:scale-95"
+                    >
+                      Review
+                    </button>
                   </div>
                 </div>
               ))}

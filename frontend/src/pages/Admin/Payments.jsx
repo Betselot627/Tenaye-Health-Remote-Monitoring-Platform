@@ -14,13 +14,77 @@ const gatewayColors = {
   telebirr: "bg-teal-100 text-teal-700",
 };
 
+function Toast({ message, type, onClose }) {
+  return (
+    <div className={`fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl text-white text-sm font-semibold
+      ${type === "success" ? "bg-emerald-600" : "bg-blue-600"}`}>
+      <span className="material-symbols-outlined text-lg">{type === "success" ? "check_circle" : "currency_exchange"}</span>
+      {message}
+      <button onClick={onClose} className="ml-2 opacity-70 hover:opacity-100">
+        <span className="material-symbols-outlined text-base">close</span>
+      </button>
+    </div>
+  );
+}
+
+function RefundModal({ txn, onConfirm, onCancel }) {
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+        <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center mb-4">
+          <span className="material-symbols-outlined text-amber-600">currency_exchange</span>
+        </div>
+        <h3 className="text-lg font-bold text-gray-800 mb-2">Confirm Refund</h3>
+        <p className="text-sm text-gray-500 mb-4">
+          You are about to refund <span className="font-bold text-gray-800">{txn.amount} ETB</span> to{" "}
+          <span className="font-bold text-gray-800">{txn.patient}</span> via {txn.gateway}.
+        </p>
+        <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 mb-6">
+          <p className="text-xs text-amber-700 font-semibold">⚠ This action is irreversible. The refund will be processed through {txn.gateway}.</p>
+        </div>
+        <div className="flex gap-3">
+          <button onClick={onCancel} className="flex-1 px-4 py-3 bg-gray-100 text-gray-600 rounded-xl font-semibold text-sm hover:bg-gray-200 transition-colors">
+            Cancel
+          </button>
+          <button onClick={onConfirm} className="flex-1 px-4 py-3 bg-amber-500 text-white rounded-xl font-bold text-sm hover:bg-amber-600 transition-colors">
+            Process Refund
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPayments() {
   const [activeTab, setActiveTab] = useState("all");
+  const [payments, setPayments] = useState(mockPayments);
+  const [refundModal, setRefundModal] = useState(null);
+  const [toast, setToast] = useState(null);
 
-  const filtered = mockPayments.filter((p) => activeTab === "all" || p.status === activeTab);
+  const filtered = payments.filter((p) => activeTab === "all" || p.status === activeTab);
+
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  const confirmRefund = () => {
+    const txn = refundModal;
+    setPayments(prev => prev.map(p => p.id === txn.id ? { ...p, status: "refunded" } : p));
+    setRefundModal(null);
+    showToast(`Refund of ${txn.amount} ETB processed for ${txn.patient}.`, "refund");
+  };
 
   return (
     <AdminLayout title="Payments & Revenue">
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      {refundModal && (
+        <RefundModal
+          txn={refundModal}
+          onConfirm={confirmRefund}
+          onCancel={() => setRefundModal(null)}
+        />
+      )}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
         <div>
           <h2 className="text-3xl font-black text-[#7B2D8B]">Payments & Revenue</h2>
@@ -181,7 +245,11 @@ export default function AdminPayments() {
                         <span className="material-symbols-outlined text-xl">receipt</span>
                       </button>
                       {txn.status === "paid" && (
-                        <button className="p-2 text-amber-500 hover:bg-amber-50 rounded-lg transition-colors">
+                        <button
+                          onClick={() => setRefundModal(txn)}
+                          className="p-2 text-amber-500 hover:bg-amber-50 rounded-lg transition-colors"
+                          title="Process refund"
+                        >
                           <span className="material-symbols-outlined text-xl">currency_exchange</span>
                         </button>
                       )}

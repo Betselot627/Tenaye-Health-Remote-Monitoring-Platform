@@ -58,19 +58,130 @@ export default function AdminSettings() {
     currency: "ETB",
     maxFileSize: 10,
   });
+  const [saveState, setSaveState] = useState("idle"); // "idle" | "saving" | "saved"
+  const [dangerModal, setDangerModal] = useState(null); // "clear_notifs" | "reset_platform"
+  const [resetConfirmText, setResetConfirmText] = useState("");
+  const [toast, setToast] = useState(null);
 
   const update = (key, val) => setSettings(prev => ({ ...prev, [key]: val }));
 
+  const handleSave = () => {
+    setSaveState("saving");
+    setTimeout(() => {
+      setSaveState("saved");
+      setTimeout(() => setSaveState("idle"), 2500);
+    }, 800);
+  };
+
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  const handleClearNotifications = () => {
+    setDangerModal(null);
+    showToast("All notifications cleared.", "success");
+  };
+
+  const handleResetPlatform = () => {
+    setDangerModal(null);
+    setResetConfirmText("");
+    showToast("Platform data reset initiated.", "error");
+  };
+
   return (
     <AdminLayout title="Settings">
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl text-white text-sm font-semibold
+          ${toast.type === "success" ? "bg-emerald-600" : "bg-red-600"}`}>
+          <span className="material-symbols-outlined text-lg">{toast.type === "success" ? "check_circle" : "warning"}</span>
+          {toast.message}
+          <button onClick={() => setToast(null)} className="ml-2 opacity-70 hover:opacity-100">
+            <span className="material-symbols-outlined text-base">close</span>
+          </button>
+        </div>
+      )}
+
+      {/* Clear Notifications Confirmation */}
+      {dangerModal === "clear_notifs" && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center mb-4">
+              <span className="material-symbols-outlined text-red-600">notifications_off</span>
+            </div>
+            <h3 className="text-lg font-bold text-gray-800 mb-2">Clear All Notifications</h3>
+            <p className="text-sm text-gray-500 mb-6">
+              This will permanently delete all notifications for all users. This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setDangerModal(null)} className="flex-1 px-4 py-3 bg-gray-100 text-gray-600 rounded-xl font-semibold text-sm hover:bg-gray-200 transition-colors">
+                Cancel
+              </button>
+              <button onClick={handleClearNotifications} className="flex-1 px-4 py-3 bg-red-600 text-white rounded-xl font-bold text-sm hover:bg-red-700 transition-colors">
+                Clear All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Platform Data Confirmation — requires typing "RESET" */}
+      {dangerModal === "reset_platform" && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center mb-4">
+              <span className="material-symbols-outlined text-red-600">warning</span>
+            </div>
+            <h3 className="text-lg font-bold text-red-700 mb-2">Reset Platform Data</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              This will permanently delete <span className="font-bold text-red-600">all platform data</span> including users, appointments, payments, and medical records. This is completely irreversible.
+            </p>
+            <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
+              <p className="text-xs text-red-700 font-semibold">Type <span className="font-black">RESET</span> to confirm</p>
+            </div>
+            <input
+              className="w-full bg-[#fdf0f9] border-2 border-red-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-red-400 mb-6 font-mono tracking-widest"
+              placeholder="RESET"
+              value={resetConfirmText}
+              onChange={e => setResetConfirmText(e.target.value.toUpperCase())}
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setDangerModal(null); setResetConfirmText(""); }}
+                className="flex-1 px-4 py-3 bg-gray-100 text-gray-600 rounded-xl font-semibold text-sm hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleResetPlatform}
+                disabled={resetConfirmText !== "RESET"}
+                className="flex-1 px-4 py-3 bg-red-600 text-white rounded-xl font-bold text-sm hover:bg-red-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Reset Everything
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
         <div>
           <h2 className="text-3xl font-black text-[#7B2D8B]">System Settings</h2>
           <p className="text-gray-400 mt-1">Platform configuration and preferences</p>
         </div>
-        <button className="flex items-center gap-2 px-6 py-3 bg-[#7B2D8B] text-white rounded-full font-bold shadow-lg shadow-purple-200 hover:bg-purple-800 transition-colors active:scale-95">
-          <span className="material-symbols-outlined text-sm">save</span>
-          Save Changes
+        <button
+          onClick={handleSave}
+          disabled={saveState === "saving"}
+          className={`flex items-center gap-2 px-6 py-3 rounded-full font-bold shadow-lg transition-all active:scale-95
+            ${saveState === "saved"
+              ? "bg-emerald-600 text-white shadow-emerald-200"
+              : "bg-[#7B2D8B] text-white shadow-purple-200 hover:bg-purple-800"
+            } disabled:opacity-70 disabled:cursor-not-allowed`}
+        >
+          <span className="material-symbols-outlined text-sm">
+            {saveState === "saving" ? "hourglass_empty" : saveState === "saved" ? "check_circle" : "save"}
+          </span>
+          {saveState === "saving" ? "Saving..." : saveState === "saved" ? "Saved!" : "Save Changes"}
         </button>
       </div>
 
@@ -221,10 +332,16 @@ export default function AdminSettings() {
             </div>
           </div>
           <div className="flex flex-wrap gap-4">
-            <button className="px-6 py-3 border-2 border-red-300 text-red-600 rounded-full font-bold text-sm hover:bg-red-50 transition-colors">
+            <button
+              onClick={() => setDangerModal("clear_notifs")}
+              className="px-6 py-3 border-2 border-red-300 text-red-600 rounded-full font-bold text-sm hover:bg-red-50 transition-colors"
+            >
               Clear All Notifications
             </button>
-            <button className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-full font-bold text-sm hover:bg-red-700 transition-colors">
+            <button
+              onClick={() => setDangerModal("reset_platform")}
+              className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-full font-bold text-sm hover:bg-red-700 transition-colors"
+            >
               <span className="material-symbols-outlined text-sm">warning</span>
               Reset Platform Data
             </button>

@@ -8,26 +8,105 @@ const statusColors = {
   pending: "bg-amber-100 text-amber-700",
 };
 
+function Toast({ message, type, onClose }) {
+  return (
+    <div className={`fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl text-white text-sm font-semibold
+      ${type === "success" ? "bg-emerald-600" : type === "error" ? "bg-red-600" : "bg-[#7B2D8B]"}`}>
+      <span className="material-symbols-outlined text-lg">
+        {type === "success" ? "check_circle" : type === "error" ? "block" : "info"}
+      </span>
+      {message}
+      <button onClick={onClose} className="ml-2 opacity-70 hover:opacity-100">
+        <span className="material-symbols-outlined text-base">close</span>
+      </button>
+    </div>
+  );
+}
+
+function ConfirmModal({ title, message, confirmLabel, confirmColor = "bg-red-600", onConfirm, onCancel }) {
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+        <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center mb-4">
+          <span className="material-symbols-outlined text-red-600">warning</span>
+        </div>
+        <h3 className="text-lg font-bold text-gray-800 mb-2">{title}</h3>
+        <p className="text-sm text-gray-500 mb-6">{message}</p>
+        <div className="flex gap-3">
+          <button onClick={onCancel} className="flex-1 px-4 py-3 bg-gray-100 text-gray-600 rounded-xl font-semibold text-sm hover:bg-gray-200 transition-colors">
+            Cancel
+          </button>
+          <button onClick={onConfirm} className={`flex-1 px-4 py-3 ${confirmColor} text-white rounded-xl font-bold text-sm hover:opacity-90 transition-opacity`}>
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminUsers() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [users, setUsers] = useState(mockUsers);
+  const [confirmModal, setConfirmModal] = useState(null); // { user }
+  const [toast, setToast] = useState(null);
 
-  const filtered = mockUsers.filter((u) => {
+  const filtered = users.filter((u) => {
     const matchSearch = u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || u.status === statusFilter;
     return matchSearch && matchStatus;
   });
 
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  const handleBlockToggle = (user) => {
+    if (user.status === "blocked") {
+      // Unblock — no confirmation needed
+      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, status: "active" } : u));
+      showToast(`${user.name} has been unblocked.`, "success");
+    } else {
+      // Block — needs confirmation
+      setConfirmModal({ user });
+    }
+  };
+
+  const confirmBlock = () => {
+    const user = confirmModal.user;
+    setUsers(prev => prev.map(u => u.id === user.id ? { ...u, status: "blocked" } : u));
+    setConfirmModal(null);
+    showToast(`${user.name} has been blocked.`, "error");
+  };
+
   return (
     <AdminLayout title="User Management">
+      {/* Toast */}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
+      {/* Block Confirmation */}
+      {confirmModal && (
+        <ConfirmModal
+          title="Block Patient Account"
+          message={`Are you sure you want to block ${confirmModal.user.name}? They will not be able to log in or book appointments.`}
+          confirmLabel="Block Account"
+          confirmColor="bg-red-600"
+          onConfirm={confirmBlock}
+          onCancel={() => setConfirmModal(null)}
+        />
+      )}
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
         <div>
           <h2 className="text-3xl font-black text-[#7B2D8B]">Patient Directory</h2>
+          <p className="text-gray-400 mt-1">Manage and monitor patient accounts</p>
         </div>
-        <button className="flex items-center gap-2 px-6 py-3 bg-[#7B2D8B] text-white rounded-full font-bold shadow-lg shadow-purple-200 hover:bg-purple-800 transition-colors active:scale-95">
-          <span className="material-symbols-outlined text-sm">person_add</span>
-          Register New Patient
+        <button className="flex items-center gap-2 px-6 py-3 bg-[#fdf0f9] text-[#7B2D8B] rounded-full font-bold hover:bg-purple-100 transition-colors">
+          <span className="material-symbols-outlined text-sm">download</span>
+          Export CSV
         </button>
       </div>
 
@@ -40,12 +119,12 @@ export default function AdminUsers() {
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-sm">
           <span className="material-symbols-outlined text-red-500 mb-3 block">block</span>
-          <p className="text-3xl font-black text-gray-800">{mockStats.blockedUsers}</p>
+          <p className="text-3xl font-black text-gray-800">{users.filter(u => u.status === "blocked").length}</p>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-1">Blocked Accounts</p>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-sm">
           <span className="material-symbols-outlined text-amber-500 mb-3 block">pending_actions</span>
-          <p className="text-3xl font-black text-gray-800">18</p>
+          <p className="text-3xl font-black text-gray-800">{users.filter(u => u.status === "pending").length}</p>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-1">Pending Verification</p>
         </div>
       </div>
@@ -116,18 +195,22 @@ export default function AdminUsers() {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
-                      <button className="p-2 text-[#7B2D8B] hover:bg-purple-50 rounded-lg transition-colors" title="View">
+                      <button className="p-2 text-[#7B2D8B] hover:bg-purple-50 rounded-lg transition-colors" title="View Profile">
                         <span className="material-symbols-outlined text-xl">visibility</span>
                       </button>
-                      {user.status === "blocked" ? (
-                        <button className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="Unblock">
-                          <span className="material-symbols-outlined text-xl">check_circle</span>
-                        </button>
-                      ) : (
-                        <button className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Block">
-                          <span className="material-symbols-outlined text-xl">block</span>
-                        </button>
-                      )}
+                      <button
+                        onClick={() => handleBlockToggle(user)}
+                        className={`p-2 rounded-lg transition-colors ${
+                          user.status === "blocked"
+                            ? "text-emerald-600 hover:bg-emerald-50"
+                            : "text-red-500 hover:bg-red-50"
+                        }`}
+                        title={user.status === "blocked" ? "Unblock" : "Block"}
+                      >
+                        <span className="material-symbols-outlined text-xl">
+                          {user.status === "blocked" ? "check_circle" : "block"}
+                        </span>
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -137,7 +220,7 @@ export default function AdminUsers() {
         </div>
         {/* Pagination */}
         <div className="px-6 py-4 bg-[#fdf0f9]/30 border-t border-gray-50 flex items-center justify-between">
-          <p className="text-xs text-gray-400 font-medium">Showing {filtered.length} of {mockUsers.length} entries</p>
+          <p className="text-xs text-gray-400 font-medium">Showing {filtered.length} of {users.length} entries</p>
           <div className="flex gap-1">
             <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white text-gray-400 transition-colors">
               <span className="material-symbols-outlined text-sm">chevron_left</span>

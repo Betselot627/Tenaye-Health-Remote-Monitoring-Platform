@@ -10,13 +10,75 @@ const statusColors = {
   no_show: "bg-gray-100 text-gray-500",
 };
 
+function Toast({ message, type, onClose }) {
+  return (
+    <div className={`fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl text-white text-sm font-semibold
+      ${type === "success" ? "bg-emerald-600" : "bg-red-600"}`}>
+      <span className="material-symbols-outlined text-lg">{type === "success" ? "check_circle" : "cancel"}</span>
+      {message}
+      <button onClick={onClose} className="ml-2 opacity-70 hover:opacity-100">
+        <span className="material-symbols-outlined text-base">close</span>
+      </button>
+    </div>
+  );
+}
+
+function ConfirmModal({ title, message, confirmLabel, onConfirm, onCancel }) {
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+        <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center mb-4">
+          <span className="material-symbols-outlined text-red-600">cancel</span>
+        </div>
+        <h3 className="text-lg font-bold text-gray-800 mb-2">{title}</h3>
+        <p className="text-sm text-gray-500 mb-6">{message}</p>
+        <div className="flex gap-3">
+          <button onClick={onCancel} className="flex-1 px-4 py-3 bg-gray-100 text-gray-600 rounded-xl font-semibold text-sm hover:bg-gray-200 transition-colors">
+            Keep Appointment
+          </button>
+          <button onClick={onConfirm} className="flex-1 px-4 py-3 bg-red-600 text-white rounded-xl font-bold text-sm hover:bg-red-700 transition-colors">
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminAppointments() {
   const [activeTab, setActiveTab] = useState("all");
+  const [appointments, setAppointments] = useState(mockAppointments);
+  const [confirmModal, setConfirmModal] = useState(null);
+  const [toast, setToast] = useState(null);
 
-  const filtered = mockAppointments.filter((a) => activeTab === "all" || a.status === activeTab);
+  const filtered = appointments.filter((a) => activeTab === "all" || a.status === activeTab);
+
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  const handleCancel = (apt) => setConfirmModal({ apt });
+
+  const confirmCancel = () => {
+    const apt = confirmModal.apt;
+    setAppointments(prev => prev.map(a => a.id === apt.id ? { ...a, status: "cancelled" } : a));
+    setConfirmModal(null);
+    showToast(`Appointment ${apt.id} has been cancelled.`, "error");
+  };
 
   return (
     <AdminLayout title="Appointments">
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      {confirmModal && (
+        <ConfirmModal
+          title="Cancel Appointment"
+          message={`Cancel appointment ${confirmModal.apt.id} between ${confirmModal.apt.patient} and ${confirmModal.apt.doctor}? This cannot be undone.`}
+          confirmLabel="Cancel Appointment"
+          onConfirm={confirmCancel}
+          onCancel={() => setConfirmModal(null)}
+        />
+      )}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
         <div>
           <h2 className="text-3xl font-black text-[#7B2D8B]">Appointments</h2>
@@ -45,7 +107,6 @@ export default function AdminAppointments() {
 
       {/* Table */}
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-        {/* Tabs */}
         <div className="p-4 border-b border-gray-50 flex gap-2 flex-wrap">
           {["all", "upcoming", "in_progress", "completed", "cancelled"].map((tab) => (
             <button
@@ -69,7 +130,7 @@ export default function AdminAppointments() {
                 <th className="px-6 py-5">Doctor</th>
                 <th className="px-6 py-5">Date & Time</th>
                 <th className="px-6 py-5">Duration</th>
-                <th className="px-6 py-5">Status</th>
+                <th className="px-6 py5">Status</th>
                 <th className="px-6 py-5 text-right">Actions</th>
               </tr>
             </thead>
@@ -98,7 +159,11 @@ export default function AdminAppointments() {
                         <span className="material-symbols-outlined text-xl">visibility</span>
                       </button>
                       {apt.status === "upcoming" && (
-                        <button className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                        <button
+                          onClick={() => handleCancel(apt)}
+                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Cancel appointment"
+                        >
                           <span className="material-symbols-outlined text-xl">cancel</span>
                         </button>
                       )}
@@ -111,8 +176,7 @@ export default function AdminAppointments() {
         </div>
 
         <div className="px-6 py-4 bg-[#fdf0f9]/30 border-t border-gray-50 flex justify-between items-center">
-          <p className="text-xs text-gray-400 font-medium">Showing {filtered.length} appointments</p>
-          <div className="flex gap-1">
+          <p className="text-xs text-gray-400 font-medium">Showing {filtered.length} appointments</p>          <div className="flex gap-1">
             <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white text-gray-400 transition-colors">
               <span className="material-symbols-outlined text-sm">chevron_left</span>
             </button>

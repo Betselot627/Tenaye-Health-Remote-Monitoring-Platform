@@ -1,25 +1,21 @@
 import AdminLayout from "./components/AdminLayout";
 
-const records = [
-  { id: "REC-001", patient: "Bereket Tadesse", type: "Consultation Notes", doctor: "Dr. Alem Bekele", date: "2025-04-26", status: "Active" },
-  { id: "REC-002", patient: "Sara Haile", type: "Prescription", doctor: "Dr. Tigist Worku", date: "2025-04-25", status: "Active" },
-  { id: "REC-003", patient: "Yonas Bekele", type: "Lab Order", doctor: "Dr. Michael Chen", date: "2025-04-25", status: "Active" },
-  { id: "REC-004", patient: "Tigist Worku", type: "Tracker", doctor: "System", date: "2025-04-24", status: "Active" },
-  { id: "REC-005", patient: "Abebe Girma", type: "Vaccination", doctor: "Dr. Sara Jenkins", date: "2025-04-23", status: "Archived" },
-];
-
-const typeColors = {
-  "Consultation Notes": "bg-blue-100 text-blue-700",
-  "Prescription": "bg-purple-100 text-purple-700",
-  "Lab Order": "bg-amber-100 text-amber-700",
-  "Tracker": "bg-emerald-100 text-emerald-700",
-  "Vaccination": "bg-teal-100 text-teal-700",
-};
+// Admin sees AGGREGATE stats and critical alerts only — NOT individual patient records
+// Individual records are owned by patients and their treating doctors (RLS enforced)
 
 const criticalAlerts = [
-  { patient: "Bereket Tadesse", alert: "Critical SpO2: 88%", time: "2 mins ago" },
-  { patient: "Sara Haile", alert: "Blood Sugar: 210 mg/dL (Post-meal)", time: "15 mins ago" },
-  { patient: "Yonas Bekele", alert: "Heart Rate: 155 BPM", time: "1 hour ago" },
+  { id: 1, patient: "Bereket Tadesse", alert: "Critical SpO2: 88%", metric: "SpO2", value: "88%", doctor: "Dr. Alem Bekele", time: "2 mins ago", acknowledged: false },
+  { id: 2, patient: "Sara Haile", alert: "Blood Sugar: 210 mg/dL (Post-meal)", metric: "Blood Sugar", value: "210 mg/dL", doctor: "Dr. Tigist Worku", time: "15 mins ago", acknowledged: false },
+  { id: 3, patient: "Yonas Bekele", alert: "Heart Rate: 155 BPM", metric: "Heart Rate", value: "155 BPM", doctor: "Dr. Michael Chen", time: "1 hour ago", acknowledged: true },
+];
+
+const recordTypeBreakdown = [
+  { type: "Consultation Notes", count: 12840, icon: "description", color: "text-blue-600", bg: "bg-blue-50" },
+  { type: "Prescriptions", count: 9210, icon: "medication", color: "text-purple-600", bg: "bg-purple-50" },
+  { type: "Lab Orders", count: 7430, icon: "science", color: "text-amber-600", bg: "bg-amber-50" },
+  { type: "Health Trackers", count: 11200, icon: "monitor_heart", color: "text-emerald-600", bg: "bg-emerald-50" },
+  { type: "Vaccinations", count: 3100, icon: "vaccines", color: "text-teal-600", bg: "bg-teal-50" },
+  { type: "Vital Alerts", count: 1041, icon: "emergency", color: "text-red-600", bg: "bg-red-50" },
 ];
 
 export default function AdminMedicalRecords() {
@@ -27,111 +23,116 @@ export default function AdminMedicalRecords() {
     <AdminLayout title="Medical Records">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
         <div>
-          <h2 className="text-3xl font-black text-[#7B2D8B]">Medical Records</h2>
-          <p className="text-gray-400 mt-1">Patient health data oversight</p>
+          <h2 className="text-3xl font-black text-[#7B2D8B]">Medical Records Oversight</h2>
+          <p className="text-gray-400 mt-1">Platform-wide health data statistics and critical alert monitoring</p>
         </div>
         <button className="flex items-center gap-2 px-6 py-3 bg-[#fdf0f9] text-[#7B2D8B] rounded-full font-bold hover:bg-purple-100 transition-colors">
           <span className="material-symbols-outlined text-sm">download</span>
-          Export Records
+          Export Report
         </button>
       </div>
 
-      {/* Stats */}
+      {/* Privacy Notice */}
+      <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-8 flex items-start gap-3">
+        <span className="material-symbols-outlined text-blue-500 flex-shrink-0 mt-0.5">info</span>
+        <div>
+          <p className="text-sm font-semibold text-blue-700">Admin Oversight Mode</p>
+          <p className="text-xs text-blue-500 mt-0.5">
+            Individual patient records are private and accessible only to patients and their treating doctors.
+            This view shows aggregate statistics and critical alerts that require platform-level attention.
+          </p>
+        </div>
+      </div>
+
+      {/* Aggregate Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
         {[
-          { label: "Total Records", value: "45,821", color: "text-[#7B2D8B]" },
-          { label: "Critical Alerts", value: "12", color: "text-red-600", bg: "bg-red-50" },
-          { label: "Records This Week", value: "892", color: "text-emerald-600" },
-          { label: "Pending Lab Orders", value: "67", color: "text-amber-600" },
+          { label: "Total Records", value: "45,821", color: "text-[#7B2D8B]", icon: "folder_shared" },
+          { label: "Critical Alerts", value: criticalAlerts.filter(a => !a.acknowledged).length.toString(), color: "text-red-600", bg: "bg-red-50", icon: "emergency" },
+          { label: "Records This Week", value: "892", color: "text-emerald-600", icon: "trending_up" },
+          { label: "Pending Lab Orders", value: "67", color: "text-amber-600", icon: "science" },
         ].map((s) => (
           <div key={s.label} className={`p-6 rounded-2xl shadow-sm ${s.bg || "bg-white"}`}>
+            <span className={`material-symbols-outlined ${s.color} mb-3 block`}>{s.icon}</span>
             <p className={`text-3xl font-black ${s.color}`}>{s.value}</p>
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-1">{s.label}</p>
           </div>
         ))}
       </div>
 
-      {/* Critical Alerts */}
-      <div className="bg-red-50 border border-red-100 rounded-2xl p-6 mb-8">
-        <div className="flex items-center gap-2 mb-4">
-          <span className="material-symbols-outlined text-red-600">emergency</span>
-          <h4 className="font-bold text-red-700">Critical Vital Alerts</h4>
-          <span className="ml-auto bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">{criticalAlerts.length}</span>
-        </div>
-        <div className="space-y-3">
-          {criticalAlerts.map((alert, i) => (
-            <div key={i} className="flex items-center justify-between bg-white p-4 rounded-xl border border-red-100">
+      {/* Record Type Breakdown */}
+      <div className="bg-white rounded-2xl shadow-sm p-6 mb-8">
+        <h4 className="text-lg font-bold text-gray-800 mb-6">Records by Type</h4>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {recordTypeBreakdown.map((item) => (
+            <div key={item.type} className={`${item.bg} p-4 rounded-xl flex items-center gap-3`}>
+              <span className={`material-symbols-outlined ${item.color} text-2xl`}>{item.icon}</span>
               <div>
-                <p className="font-bold text-gray-800 text-sm">{alert.patient}</p>
-                <p className="text-xs text-red-600 font-semibold">{alert.alert}</p>
-                <p className="text-xs text-gray-400">{alert.time}</p>
+                <p className={`text-xl font-black ${item.color}`}>{item.count.toLocaleString()}</p>
+                <p className="text-xs font-semibold text-gray-500">{item.type}</p>
               </div>
-              <button className="px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-full hover:bg-red-700 transition-colors">
-                Notify Doctor
-              </button>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-[#fdf0f9]/50 text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                <th className="px-6 py-5">Record ID</th>
-                <th className="px-6 py-5">Patient</th>
-                <th className="px-6 py-5">Record Type</th>
-                <th className="px-6 py-5">Doctor</th>
-                <th className="px-6 py-5">Date</th>
-                <th className="px-6 py-5">Status</th>
-                <th className="px-6 py-5 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50 text-sm">
-              {records.map((rec) => (
-                <tr key={rec.id} className="hover:bg-purple-50/20 transition-colors">
-                  <td className="px-6 py-4 font-mono text-xs text-gray-400">{rec.id}</td>
-                  <td className="px-6 py-4 font-bold text-gray-800">{rec.patient}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${typeColors[rec.type]}`}>{rec.type}</span>
-                  </td>
-                  <td className="px-6 py-4 text-gray-500">{rec.doctor}</td>
-                  <td className="px-6 py-4 text-gray-400">{rec.date}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${rec.status === "Active" ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
-                      {rec.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-2">
-                      <button className="p-2 text-[#7B2D8B] hover:bg-purple-50 rounded-lg transition-colors">
-                        <span className="material-symbols-outlined text-xl">visibility</span>
-                      </button>
-                      <button className="p-2 text-gray-400 hover:bg-gray-50 rounded-lg transition-colors">
-                        <span className="material-symbols-outlined text-xl">download</span>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Critical Vital Alerts — Admin monitors, system auto-notifies doctor */}
+      <div className="bg-red-50 border border-red-100 rounded-2xl p-6">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="material-symbols-outlined text-red-600">emergency</span>
+          <h4 className="font-bold text-red-700">Critical Vital Alerts</h4>
+          <span className="ml-auto bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+            {criticalAlerts.filter(a => !a.acknowledged).length} unacknowledged
+          </span>
         </div>
-        {/* Pagination */}
-        <div className="px-6 py-4 bg-[#fdf0f9]/30 border-t border-gray-50 flex justify-between items-center">
-          <p className="text-xs text-gray-400 font-medium">Showing {records.length} of {records.length} records</p>
-          <div className="flex gap-1">
-            <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white text-gray-400 transition-colors">
-              <span className="material-symbols-outlined text-sm">chevron_left</span>
-            </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#7B2D8B] text-white font-bold text-xs">1</button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white text-gray-400 font-bold text-xs">2</button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white text-gray-400 transition-colors">
-              <span className="material-symbols-outlined text-sm">chevron_right</span>
-            </button>
-          </div>
+        <p className="text-xs text-red-400 mb-4">
+          Doctors are automatically notified by the system. This log is for admin oversight only.
+        </p>
+        <div className="space-y-3">
+          {criticalAlerts.map((alert) => (
+            <div
+              key={alert.id}
+              className={`flex items-center justify-between bg-white p-4 rounded-xl border ${
+                alert.acknowledged ? "border-gray-100 opacity-60" : "border-red-100"
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  alert.acknowledged ? "bg-gray-100" : "bg-red-100"
+                }`}>
+                  <span className={`material-symbols-outlined text-sm ${
+                    alert.acknowledged ? "text-gray-400" : "text-red-600"
+                  }`}>
+                    {alert.acknowledged ? "check_circle" : "emergency"}
+                  </span>
+                </div>
+                <div>
+                  <p className="font-bold text-gray-800 text-sm">{alert.patient}</p>
+                  <p className="text-xs text-red-600 font-semibold">{alert.alert}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Assigned doctor: {alert.doctor} · {alert.time}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {alert.acknowledged ? (
+                  <span className="text-xs font-bold text-gray-400 bg-gray-100 px-3 py-1 rounded-full">
+                    Doctor notified
+                  </span>
+                ) : (
+                  <span className="text-xs font-bold text-red-600 bg-red-100 px-3 py-1 rounded-full animate-pulse">
+                    Auto-notifying...
+                  </span>
+                )}
+                <button
+                  className="p-2 text-[#7B2D8B] hover:bg-purple-50 rounded-lg transition-colors"
+                  title="View Patient File"
+                >
+                  <span className="material-symbols-outlined text-lg">open_in_new</span>
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </AdminLayout>
