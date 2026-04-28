@@ -8,6 +8,7 @@ import Register from "../pages/Auth/Register";
 import ForgotPassword from "../pages/Auth/ForgotPassword";
 import ResetPassword from "../pages/Auth/ResetPassword";
 import VideoCall from "../pages/Consultation/VideoCall";
+import DoctorApply from "../pages/Auth/DoctorApply";
 
 // ─── ADMIN ────────────────────────────────────────────────────────────────────
 import AdminDashboard from "../pages/Admin/Dashboard";
@@ -58,6 +59,7 @@ export default function AppRoutes() {
       <Route path="/home" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/apply-doctor" element={<DoctorApply />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
 
