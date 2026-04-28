@@ -12,7 +12,7 @@ function Toast({ message, type, onClose }) {
   return (
     <div
       className={`fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl text-white text-sm font-semibold
-      ${type === "success" ? "bg-emerald-600" : "bg-[#7B2D8B]"}`}
+      ${type === "success" ? "bg-emerald-600" : "bg-[#0D7377]"}`}
     >
       <span className="material-symbols-outlined text-lg">check_circle</span>
       {message}
@@ -40,7 +40,7 @@ export default function DoctorVitals() {
     return (
       <DoctorLayout title="Vital Alerts">
         <div className="flex items-center justify-center h-64">
-          <div className="w-8 h-8 border-4 border-[#7B2D8B] border-t-transparent rounded-full animate-spin"></div>
+          <div className="w-8 h-8 border-4 border-[#0D7377] border-t-transparent rounded-full animate-spin"></div>
         </div>
       </DoctorLayout>
     );
@@ -79,7 +79,7 @@ export default function DoctorVitals() {
 
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
         <div>
-          <h2 className="text-3xl font-black text-[#7B2D8B]">Vital Alerts</h2>
+          <h2 className="text-3xl font-black text-[#0D7377]">Vital Alerts</h2>
           <p className="text-gray-400 mt-1">
             Real-time patient vital sign monitoring
           </p>
@@ -87,7 +87,7 @@ export default function DoctorVitals() {
         {unacknowledged.length > 0 && (
           <button
             onClick={handleAcknowledgeAll}
-            className="flex items-center gap-2 px-6 py-3 bg-[#fdf0f9] text-[#7B2D8B] rounded-full font-bold hover:bg-purple-100 transition-colors"
+            className="flex items-center gap-2 px-6 py-3 bg-[#f0fafa] text-[#0D7377] rounded-full font-bold hover:bg-teal-100 transition-colors"
           >
             <span className="material-symbols-outlined text-sm">done_all</span>
             Acknowledge All
@@ -113,7 +113,7 @@ export default function DoctorVitals() {
           {
             label: "Unacknowledged",
             value: unacknowledged.length,
-            color: "text-[#7B2D8B]",
+            color: "text-[#0D7377]",
             bg: "bg-white",
           },
         ].map((s) => (
@@ -147,8 +147,8 @@ export default function DoctorVitals() {
             onClick={() => setFilterLevel(level)}
             className={`px-4 py-2 rounded-full text-sm font-bold capitalize transition-colors ${
               filterLevel === level
-                ? "bg-[#7B2D8B] text-white"
-                : "text-gray-400 hover:bg-[#fdf0f9]"
+                ? "bg-[#0D7377] text-white"
+                : "text-gray-400 hover:bg-[#f0fafa]"
             }`}
           >
             {level === "all"

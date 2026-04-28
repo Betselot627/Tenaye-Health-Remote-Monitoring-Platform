@@ -100,17 +100,16 @@ function DoctorModal({ doctor, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
-
-        {/* ── Header ── */}
+        {/* Header */}
         <div className="bg-gradient-to-br from-[#7B2D8B] to-[#9d3fb0] p-6 text-white relative flex-shrink-0">
-          {step < 4 && (
-            <button
-              onClick={onClose}
-              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition-colors"
-            >
-              <span className="material-symbols-outlined text-white text-lg">close</span>
-            </button>
-          )}
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+          >
+            <span className="material-symbols-outlined text-white text-lg">
+              close
+            </span>
+          </button>
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0">
               <span className="material-symbols-outlined text-white text-3xl">person</span>
@@ -147,18 +146,25 @@ function DoctorModal({ doctor, onClose }) {
                   { icon: "local_hospital", label: "Hospital", value: doctor.hospital },
                   { icon: "schedule", label: "Availability", value: doctor.availability },
                 ].map(({ icon, label, value }) => (
-                  <div key={label} className="p-3 bg-[#fdf0f9]/60 rounded-xl border border-purple-50">
-                    <span className="material-symbols-outlined text-[#7B2D8B] text-lg">{icon}</span>
+                  <div key={label} className="p-3 bg-[#fdf0f9]/40 rounded-xl">
+                    <span className="material-symbols-outlined text-[#7B2D8B] text-lg">
+                      {icon}
+                    </span>
                     <p className="text-xs text-gray-400 mt-1">{label}</p>
                     <p className="text-sm font-bold text-gray-800">{value}</p>
                   </div>
                 ))}
               </div>
-              <div className="p-3 bg-[#fdf0f9]/60 rounded-xl border border-purple-50">
-                <p className="text-xs text-gray-400 mb-2">Languages</p>
+              <div className="p-3 bg-[#fdf0f9]/40 rounded-xl">
+                <p className="text-xs text-gray-400 mb-1">Languages</p>
                 <div className="flex gap-2 flex-wrap">
                   {doctor.languages.map((l) => (
-                    <span key={l} className="text-xs font-semibold px-2.5 py-1 bg-purple-100 text-[#7B2D8B] rounded-full">{l}</span>
+                    <span
+                      key={l}
+                      className="text-xs font-semibold px-2.5 py-1 bg-purple-100 text-[#7B2D8B] rounded-full"
+                    >
+                      {l}
+                    </span>
                   ))}
                 </div>
               </div>
@@ -177,7 +183,7 @@ function DoctorModal({ doctor, onClose }) {
                   min={today}
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7B2D8B] focus:ring-2 focus:ring-purple-100"
+                  className="w-full mt-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7B2D8B] focus:ring-2 focus:ring-purple-100"
                 />
               </div>
               <div>
@@ -189,11 +195,7 @@ function DoctorModal({ doctor, onClose }) {
                     <button
                       key={t}
                       onClick={() => setSelectedTime(t)}
-                      className={`py-2.5 text-xs font-bold rounded-xl border transition-all ${
-                        selectedTime === t
-                          ? "bg-gradient-to-r from-[#7B2D8B] to-[#9d3fb0] text-white border-transparent shadow-lg shadow-purple-200"
-                          : "border-gray-200 text-gray-600 hover:border-purple-300 hover:text-[#7B2D8B] hover:bg-purple-50"
-                      }`}
+                      className={`py-2 text-xs font-bold rounded-xl border transition-all ${selectedTime === t ? "bg-gradient-to-r from-[#7B2D8B] to-[#9d3fb0] text-white border-transparent shadow-lg" : "border-gray-200 text-gray-600 hover:border-purple-300 hover:text-[#7B2D8B]"}`}
                     >
                       {t}
                     </button>
@@ -303,7 +305,7 @@ function DoctorModal({ doctor, onClose }) {
               <button
                 onClick={() => setStep(2)}
                 disabled={doctor.status === "busy"}
-                className="flex-1 py-3 bg-gradient-to-r from-[#7B2D8B] to-[#9d3fb0] text-white text-sm font-bold rounded-xl hover:scale-105 transition-all shadow-lg shadow-purple-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 bg-gradient-to-r from-[#7B2D8B] to-[#9d3fb0] text-white text-sm font-bold rounded-xl hover:scale-105 transition-all shadow-lg shadow-purple-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
                 {doctor.status === "busy" ? "Currently Busy" : (
                   <>
@@ -326,7 +328,7 @@ function DoctorModal({ doctor, onClose }) {
               <button
                 onClick={() => setStep(3)}
                 disabled={!selectedDate || !selectedTime}
-                className="flex-1 py-3 bg-gradient-to-r from-[#7B2D8B] to-[#9d3fb0] text-white text-sm font-bold rounded-xl hover:scale-105 transition-all shadow-lg shadow-purple-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 bg-gradient-to-r from-[#7B2D8B] to-[#9d3fb0] text-white text-sm font-bold rounded-xl hover:scale-105 transition-all shadow-lg shadow-purple-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
                 Continue to Payment
                 <span className="material-symbols-outlined text-sm">arrow_forward</span>
@@ -394,7 +396,9 @@ export default function PatientDoctors() {
         {/* Header */}
         <div>
           <h2 className="text-2xl font-black text-[#7B2D8B] flex items-center gap-2">
-            <span className="material-symbols-outlined text-3xl">medical_services</span>
+            <span className="material-symbols-outlined text-3xl">
+              medical_services
+            </span>
             Find Doctors
           </h2>
           <p className="text-gray-400 text-sm mt-0.5">{filtered.length} doctors available</p>
@@ -408,13 +412,13 @@ export default function PatientDoctors() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name or specialty..."
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7B2D8B] focus:ring-2 focus:ring-purple-100 bg-white"
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#E05C8A] focus:ring-2 focus:ring-rose-100 bg-white"
             />
           </div>
           <select
             value={specialty}
             onChange={(e) => setSpecialty(e.target.value)}
-            className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7B2D8B] bg-white text-gray-700 font-semibold"
+            className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#E05C8A] bg-white text-gray-700 font-semibold"
           >
             {specialties.map((s) => <option key={s}>{s}</option>)}
           </select>
@@ -425,11 +429,13 @@ export default function PatientDoctors() {
           {filtered.map((doc) => (
             <div
               key={doc.id}
-              className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-purple-200 transition-all duration-300 p-5 group"
+              className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-rose-200 transition-all duration-300 p-5 group"
             >
               <div className="flex items-start gap-4">
                 <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#fdf0f9] to-purple-100 flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm flex-shrink-0">
-                  <span className="material-symbols-outlined text-[#7B2D8B] text-2xl">person</span>
+                  <span className="material-symbols-outlined text-[#7B2D8B] text-2xl">
+                    person
+                  </span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
@@ -456,22 +462,28 @@ export default function PatientDoctors() {
 
               <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
                 <div className="flex items-center gap-1.5 text-gray-500">
-                  <span className="material-symbols-outlined text-sm text-[#7B2D8B]">work_history</span>
+                  <span className="material-symbols-outlined text-sm text-[#7B2D8B]">
+                    work_history
+                  </span>
                   {doc.experience}
                 </div>
                 <div className="flex items-center gap-1.5 text-gray-500">
-                  <span className="material-symbols-outlined text-sm text-[#7B2D8B]">payments</span>
+                  <span className="material-symbols-outlined text-sm text-[#7B2D8B]">
+                    payments
+                  </span>
                   {doc.fee} ETB
                 </div>
                 <div className="flex items-center gap-1.5 text-gray-500 col-span-2 truncate">
-                  <span className="material-symbols-outlined text-sm text-[#7B2D8B]">local_hospital</span>
+                  <span className="material-symbols-outlined text-sm text-[#7B2D8B]">
+                    local_hospital
+                  </span>
                   <span className="truncate">{doc.hospital}</span>
                 </div>
               </div>
 
               <button
                 onClick={() => setSelected(doc)}
-                className="w-full mt-4 py-2.5 bg-gradient-to-r from-[#7B2D8B] to-[#9d3fb0] text-white text-xs font-bold rounded-xl hover:scale-[1.02] transition-all shadow-md shadow-purple-200"
+                className="w-full mt-4 py-2.5 bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white text-xs font-bold rounded-xl hover:scale-[1.02] transition-all shadow-md shadow-rose-200"
               >
                 View Profile & Book
               </button>

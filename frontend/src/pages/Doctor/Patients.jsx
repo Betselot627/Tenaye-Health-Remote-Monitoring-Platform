@@ -36,8 +36,8 @@ function PatientDetailModal({ patient, onClose }) {
         <div className="p-6 pb-0">
           <div className="flex items-start justify-between mb-5">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-[#fdf0f9] flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-[#7B2D8B] text-3xl">
+              <div className="w-16 h-16 rounded-2xl bg-[#f0fafa] flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-[#0D7377] text-3xl">
                   person
                 </span>
               </div>
@@ -73,7 +73,7 @@ function PatientDetailModal({ patient, onClose }) {
                 onClick={() => setTab(t.key)}
                 className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold whitespace-nowrap border-b-2 transition-colors ${
                   tab === t.key
-                    ? "border-[#7B2D8B] text-[#7B2D8B]"
+                    ? "border-[#0D7377] text-[#0D7377]"
                     : "border-transparent text-gray-400 hover:text-gray-600"
                 }`}
               >
@@ -174,7 +174,7 @@ function PatientDetailModal({ patient, onClose }) {
                     className="flex items-center justify-between p-4 bg-gray-50 rounded-xl"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="material-symbols-outlined text-[#7B2D8B] text-xl">
+                      <span className="material-symbols-outlined text-[#0D7377] text-xl">
                         medication
                       </span>
                       <div>
@@ -210,7 +210,7 @@ function PatientDetailModal({ patient, onClose }) {
                     className="flex items-center justify-between p-4 bg-gray-50 rounded-xl"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="material-symbols-outlined text-[#7B2D8B] text-xl">
+                      <span className="material-symbols-outlined text-[#0D7377] text-xl">
                         biotech
                       </span>
                       <div>
@@ -254,7 +254,7 @@ function PatientDetailModal({ patient, onClose }) {
         <div className="p-4 border-t border-gray-100">
           <button
             onClick={onClose}
-            className="w-full py-3 bg-[#7B2D8B] text-white rounded-xl font-bold text-sm hover:bg-[#6a2578] transition-colors"
+            className="w-full py-3 bg-[#0D7377] text-white rounded-xl font-bold text-sm hover:bg-[#0a5c60] transition-colors"
           >
             Close
           </button>
@@ -290,7 +290,7 @@ export default function DoctorPatients() {
     return (
       <DoctorLayout title="My Patients">
         <div className="flex items-center justify-center h-64">
-          <div className="w-8 h-8 border-4 border-[#7B2D8B] border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-[#0D7377] border-t-transparent rounded-full animate-spin" />
         </div>
       </DoctorLayout>
     );
@@ -315,7 +315,7 @@ export default function DoctorPatients() {
               placeholder="Search patients..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#7B2D8B]/20"
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0D7377]/20"
             />
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -325,7 +325,7 @@ export default function DoctorPatients() {
                 onClick={() => setFilterStatus(s)}
                 className={`px-4 py-2.5 rounded-xl text-sm font-semibold capitalize transition-colors ${
                   filterStatus === s
-                    ? "bg-[#7B2D8B] text-white"
+                    ? "bg-[#0D7377] text-white"
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
@@ -364,12 +364,12 @@ export default function DoctorPatients() {
                       onClick={() => setSelected(p)}
                       className="flex items-center gap-3 group"
                     >
-                      <div className="w-9 h-9 rounded-full bg-[#fdf0f9] flex items-center justify-center shrink-0">
-                        <span className="material-symbols-outlined text-[#7B2D8B] text-lg">
+                      <div className="w-9 h-9 rounded-full bg-[#f0fafa] flex items-center justify-center shrink-0">
+                        <span className="material-symbols-outlined text-[#0D7377] text-lg">
                           person
                         </span>
                       </div>
-                      <span className="font-semibold text-gray-800 group-hover:text-[#7B2D8B] transition-colors">
+                      <span className="font-semibold text-gray-800 group-hover:text-[#0D7377] transition-colors">
                         {p.name}
                       </span>
                     </button>
@@ -389,7 +389,7 @@ export default function DoctorPatients() {
                   <td className="py-4">
                     <button
                       onClick={() => setSelected(p)}
-                      className="text-[#7B2D8B] hover:text-[#6a2578] font-semibold text-xs"
+                      className="text-[#0D7377] hover:text-[#0a5c60] font-semibold text-xs"
                     >
                       View
                     </button>

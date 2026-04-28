@@ -19,7 +19,7 @@ function ReceiptModal({ payment, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
-        <div className="bg-gradient-to-br from-[#7B2D8B] to-[#9d3fb0] p-6 text-white text-center relative">
+        <div className="bg-gradient-to-br from-[#E05C8A] to-[#F4845F] p-6 text-white text-center relative">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition-colors"
@@ -59,17 +59,17 @@ function ReceiptModal({ payment, onClose }) {
               <span className="text-sm font-bold text-gray-800">{value}</span>
             </div>
           ))}
-          <div className="flex justify-between items-center py-3 bg-gradient-to-r from-[#fdf0f9] to-purple-50 rounded-xl px-3 mt-2">
+          <div className="flex justify-between items-center py-3 bg-gradient-to-r from-[#fff5f7] to-rose-50 rounded-xl px-3 mt-2">
             <span className="text-sm font-black text-gray-700">
               Total Amount
             </span>
-            <span className="text-xl font-black text-[#7B2D8B]">
+            <span className="text-xl font-black text-[#E05C8A]">
               {payment.amount} ETB
             </span>
           </div>
         </div>
         <div className="px-6 pb-6 flex gap-3">
-          <button className="flex-1 py-2.5 bg-gradient-to-r from-[#7B2D8B] to-[#9d3fb0] text-white text-sm font-bold rounded-xl hover:scale-105 transition-all shadow-lg shadow-purple-200 flex items-center justify-center gap-2">
+          <button className="flex-1 py-2.5 bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white text-sm font-bold rounded-xl hover:scale-105 transition-all shadow-lg shadow-rose-200 flex items-center justify-center gap-2">
             <span className="material-symbols-outlined text-sm">download</span>
             Download
           </button>
@@ -105,7 +105,7 @@ export default function PatientBilling() {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h2 className="text-2xl font-black text-[#7B2D8B] flex items-center gap-2">
+          <h2 className="text-2xl font-black text-[#E05C8A] flex items-center gap-2">
             <span className="material-symbols-outlined text-3xl">payments</span>
             Billing & Payments
           </h2>
@@ -137,9 +137,9 @@ export default function PatientBilling() {
               label: "Total Transactions",
               value: payments.length,
               icon: "receipt_long",
-              color: "text-[#7B2D8B]",
-              bg: "bg-[#fdf0f9]",
-              border: "border-purple-100",
+              color: "text-[#E05C8A]",
+              bg: "bg-[#fff5f7]",
+              border: "border-rose-100",
             },
           ].map(({ label, value, icon, color, bg, border }) => (
             <div
@@ -169,7 +169,7 @@ export default function PatientBilling() {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${filter === f ? "bg-gradient-to-r from-[#7B2D8B] to-[#9d3fb0] text-white shadow-lg shadow-purple-200" : "bg-white text-gray-500 border border-gray-200 hover:border-purple-300 hover:text-[#7B2D8B]"}`}
+              className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${filter === f ? "bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white shadow-lg shadow-rose-200" : "bg-white text-gray-500 border border-gray-200 hover:border-rose-300 hover:text-[#E05C8A]"}`}
             >
               {f.charAt(0).toUpperCase() + f.slice(1)}
               <span
@@ -188,12 +188,12 @@ export default function PatientBilling() {
           {filtered.map((pay) => (
             <div
               key={pay.id}
-              className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-purple-200 transition-all duration-300 p-5 group"
+              className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-rose-200 transition-all duration-300 p-5 group"
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#fdf0f9] to-purple-100 flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm flex-shrink-0">
-                    <span className="material-symbols-outlined text-[#7B2D8B] text-xl">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#fff5f7] to-rose-100 flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm flex-shrink-0">
+                    <span className="material-symbols-outlined text-[#E05C8A] text-xl">
                       {methodIcons[pay.method] || "payments"}
                     </span>
                   </div>
@@ -237,7 +237,7 @@ export default function PatientBilling() {
                   {pay.receipt && pay.status !== "pending" && (
                     <button
                       onClick={() => setSelected(pay)}
-                      className="p-2 rounded-xl bg-gradient-to-br from-[#fdf0f9] to-purple-50 text-[#7B2D8B] hover:from-purple-100 transition-all hover:scale-110 border border-purple-100"
+                      className="p-2 rounded-xl bg-gradient-to-br from-[#fff5f7] to-rose-50 text-[#E05C8A] hover:from-rose-100 transition-all hover:scale-110 border border-rose-100"
                     >
                       <span className="material-symbols-outlined text-lg">
                         receipt_long

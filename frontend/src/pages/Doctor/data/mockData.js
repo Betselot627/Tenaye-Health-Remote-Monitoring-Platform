@@ -379,6 +379,25 @@ export const mockSchedule = [
   { day: "Friday", slots: ["09:00 AM", "02:00 PM", "03:00 PM"] },
 ];
 
+export const mockWeeklyEarnings = [
+  { day: "Mon", amount: 2500 },
+  { day: "Tue", amount: 3200 },
+  { day: "Wed", amount: 1800 },
+  { day: "Thu", amount: 4100 },
+  { day: "Fri", amount: 3600 },
+  { day: "Sat", amount: 2200 },
+  { day: "Sun", amount: 900 },
+];
+
+export const mockMonthlyPatients = [
+  { month: "Nov", count: 98 },
+  { month: "Dec", count: 112 },
+  { month: "Jan", count: 105 },
+  { month: "Feb", count: 121 },
+  { month: "Mar", count: 134 },
+  { month: "Apr", count: 148 },
+];
+
 export const mockActivity = [
   {
     id: "1",
