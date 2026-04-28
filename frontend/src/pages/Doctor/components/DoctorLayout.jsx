@@ -13,6 +13,7 @@ const notificationRoutes = {
 };
 
 const navItems = [
+  { path: "/doctor", label: "Dashboard", icon: "grid_view" }, // ← was missing!
   {
     path: "/doctor/appointments",
     label: "Appointments",
