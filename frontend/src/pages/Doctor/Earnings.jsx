@@ -41,7 +41,7 @@ export default function DoctorEarnings() {
     return (
       <DoctorLayout title="Earnings">
         <div className="flex items-center justify-center h-64">
-          <div className="w-8 h-8 border-4 border-[#7B2D8B] border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-[#0D7377] border-t-transparent rounded-full animate-spin" />
         </div>
       </DoctorLayout>
     );
@@ -56,7 +56,7 @@ export default function DoctorEarnings() {
               label: "Monthly Earnings",
               value: `${mockDoctorStats.monthlyEarnings.toLocaleString()} ETB`,
               icon: "payments",
-              color: "from-[#7B2D8B] to-[#9d3fb0]",
+              color: "from-[#0D7377] to-[#14A085]",
             },
             {
               label: "Total Received",
@@ -95,7 +95,7 @@ export default function DoctorEarnings() {
                   onClick={() => setFilterStatus(s)}
                   className={`px-4 py-2 rounded-xl text-sm font-semibold capitalize transition-colors ${
                     filterStatus === s
-                      ? "bg-[#7B2D8B] text-white"
+                      ? "bg-[#0D7377] text-white"
                       : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                   }`}
                 >

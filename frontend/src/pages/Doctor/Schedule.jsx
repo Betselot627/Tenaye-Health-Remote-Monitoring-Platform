@@ -66,7 +66,7 @@ export default function DoctorSchedule() {
     return (
       <DoctorLayout title="My Schedule">
         <div className="flex items-center justify-center h-64">
-          <div className="w-8 h-8 border-4 border-[#7B2D8B] border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-[#0D7377] border-t-transparent rounded-full animate-spin" />
         </div>
       </DoctorLayout>
     );
@@ -87,7 +87,7 @@ export default function DoctorSchedule() {
           </div>
           <button
             onClick={handleSave}
-            className="flex items-center gap-2 px-5 py-2.5 bg-[#7B2D8B] text-white rounded-xl font-bold text-sm hover:bg-[#6a2578] transition-colors"
+            className="flex items-center gap-2 px-5 py-2.5 bg-[#0D7377] text-white rounded-xl font-bold text-sm hover:bg-[#0a5c60] transition-colors"
           >
             <span className="material-symbols-outlined text-lg">save</span>
             Save Schedule
@@ -115,7 +115,7 @@ export default function DoctorSchedule() {
                       onClick={() => toggleSlot(dayIndex, slot)}
                       className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
                         active
-                          ? "bg-[#7B2D8B] text-white shadow-sm"
+                          ? "bg-[#0D7377] text-white shadow-sm"
                           : "bg-gray-100 text-gray-500 hover:bg-gray-200"
                       }`}
                     >

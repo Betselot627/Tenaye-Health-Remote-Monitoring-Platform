@@ -14,9 +14,9 @@ function VitalCard({
 }) {
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl p-5 group cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl bg-white shadow-sm border border-gray-100 hover:border-purple-200`}
+      className={`relative overflow-hidden rounded-2xl p-5 group cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl bg-white shadow-sm border border-gray-100 hover:border-rose-200`}
     >
-      <div className="absolute top-0 right-0 w-24 h-24 rounded-full -mr-8 -mt-8 bg-gradient-to-br from-purple-100 to-pink-100 transition-all duration-500 group-hover:scale-125" />
+      <div className="absolute top-0 right-0 w-24 h-24 rounded-full -mr-8 -mt-8 bg-gradient-to-br from-rose-100 to-pink-100 transition-all duration-500 group-hover:scale-125" />
       <div className="relative">
         <div
           className={`w-12 h-12 rounded-xl ${bgColor} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-sm`}
@@ -96,7 +96,7 @@ export default function PatientVitals() {
       unit: "kg",
       icon: "scale",
       color: "text-purple-500",
-      bgColor: "bg-purple-50",
+      bgColor: "bg-rose-50",
       status: "Stable",
       statusColor: "bg-blue-100 text-blue-700",
     },
@@ -108,7 +108,7 @@ export default function PatientVitals() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-black text-[#7B2D8B] flex items-center gap-2">
+            <h2 className="text-2xl font-black text-[#E05C8A] flex items-center gap-2">
               <span className="material-symbols-outlined text-3xl">
                 monitor_heart
               </span>
@@ -123,7 +123,7 @@ export default function PatientVitals() {
               <button
                 key={t}
                 onClick={() => setActiveTab(t)}
-                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === t ? "bg-gradient-to-r from-[#7B2D8B] to-[#9d3fb0] text-white shadow-lg shadow-purple-200" : "bg-white text-gray-500 border border-gray-200 hover:border-purple-300 hover:text-[#7B2D8B]"}`}
+                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === t ? "bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white shadow-lg shadow-rose-200" : "bg-white text-gray-500 border border-gray-200 hover:border-rose-300 hover:text-[#E05C8A]"}`}
               >
                 {t.charAt(0).toUpperCase() + t.slice(1)}
               </button>
@@ -141,11 +141,11 @@ export default function PatientVitals() {
             </div>
 
             {/* Heart rate chart */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-purple-200 transition-all duration-300 p-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-rose-200 transition-all duration-300 p-6">
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[#7B2D8B]">
+                    <span className="material-symbols-outlined text-[#E05C8A]">
                       show_chart
                     </span>
                     Heart Rate Trend
@@ -154,7 +154,7 @@ export default function PatientVitals() {
                     Last 7 readings
                   </p>
                 </div>
-                <span className="bg-gradient-to-r from-[#fdf0f9] to-purple-50 text-[#7B2D8B] text-xs font-bold px-3 py-1.5 rounded-full border border-purple-100">
+                <span className="bg-gradient-to-r from-[#fff5f7] to-rose-50 text-[#E05C8A] text-xs font-bold px-3 py-1.5 rounded-full border border-rose-100">
                   BPM
                 </span>
               </div>
@@ -166,8 +166,8 @@ export default function PatientVitals() {
                 >
                   <defs>
                     <linearGradient id="hrGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#7B2D8B" stopOpacity="0.2" />
-                      <stop offset="100%" stopColor="#7B2D8B" stopOpacity="0" />
+                      <stop offset="0%" stopColor="#E05C8A" stopOpacity="0.2" />
+                      <stop offset="100%" stopColor="#E05C8A" stopOpacity="0" />
                     </linearGradient>
                   </defs>
                   {/* Grid lines */}
@@ -200,7 +200,7 @@ export default function PatientVitals() {
                         <path
                           d={d}
                           fill="none"
-                          stroke="#7B2D8B"
+                          stroke="#E05C8A"
                           strokeWidth="3"
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -211,7 +211,7 @@ export default function PatientVitals() {
                               cx={cx}
                               cy={cy}
                               r="5"
-                              fill="#7B2D8B"
+                              fill="#E05C8A"
                               className="animate-pulse"
                               style={{ animationDelay: `${i * 0.1}s` }}
                             />
@@ -220,7 +220,7 @@ export default function PatientVitals() {
                               y={cy - 10}
                               textAnchor="middle"
                               fontSize="10"
-                              fill="#7B2D8B"
+                              fill="#E05C8A"
                               fontWeight="bold"
                             >
                               {vitals[i].hr}
@@ -236,7 +236,7 @@ export default function PatientVitals() {
                 {vitals.map((v) => (
                   <span
                     key={v.date}
-                    className="hover:text-[#7B2D8B] transition-colors cursor-default"
+                    className="hover:text-[#E05C8A] transition-colors cursor-default"
                   >
                     {v.date}
                   </span>
@@ -245,7 +245,7 @@ export default function PatientVitals() {
             </div>
 
             {/* BP chart */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-purple-200 transition-all duration-300 p-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-rose-200 transition-all duration-300 p-6">
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <h3 className="font-bold text-gray-800 flex items-center gap-2">
@@ -273,7 +273,7 @@ export default function PatientVitals() {
                       </span>
                       <div className="flex-1 bg-gray-100 rounded-full h-3 overflow-hidden">
                         <div
-                          className={`h-full rounded-full transition-all duration-700 ${sys >= 140 ? "bg-gradient-to-r from-red-400 to-red-500" : "bg-gradient-to-r from-[#7B2D8B] to-[#9d3fb0]"}`}
+                          className={`h-full rounded-full transition-all duration-700 ${sys >= 140 ? "bg-gradient-to-r from-red-400 to-red-500" : "bg-gradient-to-r from-[#E05C8A] to-[#F4845F]"}`}
                           style={{
                             width: `${Math.min(Math.max(pct, 10), 100)}%`,
                           }}
@@ -295,7 +295,7 @@ export default function PatientVitals() {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="p-5 border-b border-gray-100">
               <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#7B2D8B]">
+                <span className="material-symbols-outlined text-[#E05C8A]">
                   history
                 </span>
                 Vitals History
@@ -304,7 +304,7 @@ export default function PatientVitals() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-[#fdf0f9]/50">
+                  <tr className="bg-[#fff5f7]/50">
                     {[
                       "Date",
                       "Blood Pressure",
@@ -326,12 +326,12 @@ export default function PatientVitals() {
                   {vitals.map((v, i) => (
                     <tr
                       key={v.date}
-                      className={`hover:bg-[#fdf0f9]/30 transition-colors ${i === 0 ? "bg-purple-50/30" : ""}`}
+                      className={`hover:bg-[#fff5f7]/30 transition-colors ${i === 0 ? "bg-rose-50/30" : ""}`}
                     >
                       <td className="px-4 py-3 font-bold text-gray-800">
                         {v.date}
                         {i === 0 && (
-                          <span className="ml-2 text-xs bg-[#7B2D8B] text-white px-1.5 py-0.5 rounded-full">
+                          <span className="ml-2 text-xs bg-[#E05C8A] text-white px-1.5 py-0.5 rounded-full">
                             Latest
                           </span>
                         )}

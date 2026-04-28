@@ -16,7 +16,7 @@ const categoryColors = {
   "Heart Health": "bg-red-100 text-red-700",
   Diabetes: "bg-amber-100 text-amber-700",
   "Skin Health": "bg-pink-100 text-pink-700",
-  Neurology: "bg-purple-100 text-purple-700",
+  Neurology: "bg-rose-100 text-purple-700",
   Pediatrics: "bg-blue-100 text-blue-700",
   Orthopedics: "bg-emerald-100 text-emerald-700",
 };
@@ -25,7 +25,7 @@ function BlogModal({ blog, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
-        <div className="bg-gradient-to-br from-[#7B2D8B] to-[#9d3fb0] p-6 text-white relative flex-shrink-0">
+        <div className="bg-gradient-to-br from-[#E05C8A] to-[#F4845F] p-6 text-white relative flex-shrink-0">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition-colors"
@@ -53,7 +53,7 @@ function BlogModal({ blog, onClose }) {
         </div>
         <div className="overflow-y-auto flex-1 p-6 space-y-4">
           <p className="text-gray-600 leading-relaxed">{blog.excerpt}</p>
-          <div className="p-4 bg-[#fdf0f9]/50 rounded-xl border border-purple-100 text-sm text-gray-600 leading-relaxed">
+          <div className="p-4 bg-[#fff5f7]/50 rounded-xl border border-rose-100 text-sm text-gray-600 leading-relaxed">
             <p>
               This is a preview of the full article. In the complete version,
               you'll find detailed information about {blog.title.toLowerCase()},
@@ -69,7 +69,7 @@ function BlogModal({ blog, onClose }) {
             {blog.tags.map((tag) => (
               <span
                 key={tag}
-                className="text-xs font-semibold px-2.5 py-1 bg-purple-100 text-[#7B2D8B] rounded-full"
+                className="text-xs font-semibold px-2.5 py-1 bg-rose-100 text-[#E05C8A] rounded-full"
               >
                 #{tag}
               </span>
@@ -97,7 +97,7 @@ function BlogModal({ blog, onClose }) {
           </div>
         </div>
         <div className="p-6 border-t border-gray-100 flex gap-3 flex-shrink-0">
-          <button className="flex-1 py-2.5 bg-gradient-to-r from-[#7B2D8B] to-[#9d3fb0] text-white text-sm font-bold rounded-xl hover:scale-105 transition-all shadow-lg shadow-purple-200 flex items-center justify-center gap-2">
+          <button className="flex-1 py-2.5 bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white text-sm font-bold rounded-xl hover:scale-105 transition-all shadow-lg shadow-rose-200 flex items-center justify-center gap-2">
             <span className="material-symbols-outlined text-sm">favorite</span>
             Like Article
           </button>
@@ -132,7 +132,7 @@ export default function PatientBlogs() {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h2 className="text-2xl font-black text-[#7B2D8B] flex items-center gap-2">
+          <h2 className="text-2xl font-black text-[#E05C8A] flex items-center gap-2">
             <span className="material-symbols-outlined text-3xl">article</span>
             Health Blogs
           </h2>
@@ -151,13 +151,13 @@ export default function PatientBlogs() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search articles..."
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7B2D8B] focus:ring-2 focus:ring-purple-100 bg-white"
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#E05C8A] focus:ring-2 focus:ring-rose-100 bg-white"
             />
           </div>
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7B2D8B] bg-white text-gray-700 font-semibold"
+            className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#E05C8A] bg-white text-gray-700 font-semibold"
           >
             {categories.map((c) => (
               <option key={c}>{c}</option>
@@ -169,7 +169,7 @@ export default function PatientBlogs() {
         {filtered.length > 0 && category === "All" && !search && (
           <div
             onClick={() => setSelected(filtered[0])}
-            className="bg-gradient-to-br from-[#7B2D8B] to-[#9d3fb0] rounded-2xl p-6 text-white cursor-pointer hover:shadow-2xl hover:scale-[1.01] transition-all duration-300 relative overflow-hidden"
+            className="bg-gradient-to-br from-[#E05C8A] to-[#F4845F] rounded-2xl p-6 text-white cursor-pointer hover:shadow-2xl hover:scale-[1.01] transition-all duration-300 relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 w-48 h-48 rounded-full -mr-16 -mt-16 bg-white/10" />
             <span className="inline-block text-xs font-bold px-2.5 py-1 rounded-full bg-white/20 mb-3">
@@ -211,7 +211,7 @@ export default function PatientBlogs() {
               <div
                 key={blog.id}
                 onClick={() => setSelected(blog)}
-                className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-purple-200 transition-all duration-300 p-5 group cursor-pointer"
+                className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-rose-200 transition-all duration-300 p-5 group cursor-pointer"
               >
                 <div className="flex items-start justify-between mb-3">
                   <span
@@ -221,7 +221,7 @@ export default function PatientBlogs() {
                   </span>
                   <span className="text-xs text-gray-400">{blog.readTime}</span>
                 </div>
-                <h3 className="text-sm font-black text-gray-800 leading-snug group-hover:text-[#7B2D8B] transition-colors line-clamp-2">
+                <h3 className="text-sm font-black text-gray-800 leading-snug group-hover:text-[#E05C8A] transition-colors line-clamp-2">
                   {blog.title}
                 </h3>
                 <p className="text-xs text-gray-500 mt-2 line-clamp-2 leading-relaxed">
@@ -229,8 +229,8 @@ export default function PatientBlogs() {
                 </p>
                 <div className="mt-4 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#fdf0f9] to-purple-100 flex items-center justify-center">
-                      <span className="material-symbols-outlined text-[#7B2D8B] text-sm">
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#fff5f7] to-rose-100 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-[#E05C8A] text-sm">
                         person
                       </span>
                     </div>

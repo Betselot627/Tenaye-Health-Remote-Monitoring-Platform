@@ -11,7 +11,7 @@ function PrescriptionModal({ rx, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-        <div className="bg-gradient-to-br from-[#7B2D8B] to-[#9d3fb0] p-6 text-white relative">
+        <div className="bg-gradient-to-br from-[#E05C8A] to-[#F4845F] p-6 text-white relative">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition-colors"
@@ -52,9 +52,9 @@ function PrescriptionModal({ rx, onClose }) {
           ].map(({ icon, label, value }) => (
             <div
               key={label}
-              className="flex items-center gap-3 p-3 bg-[#fdf0f9]/40 rounded-xl"
+              className="flex items-center gap-3 p-3 bg-[#fff5f7]/40 rounded-xl"
             >
-              <span className="material-symbols-outlined text-[#7B2D8B] text-lg">
+              <span className="material-symbols-outlined text-[#E05C8A] text-lg">
                 {icon}
               </span>
               <div>
@@ -100,7 +100,7 @@ export default function PatientPrescriptions() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-black text-[#7B2D8B] flex items-center gap-2">
+            <h2 className="text-2xl font-black text-[#E05C8A] flex items-center gap-2">
               <span className="material-symbols-outlined text-3xl">
                 medication
               </span>
@@ -119,7 +119,7 @@ export default function PatientPrescriptions() {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${filter === f ? "bg-gradient-to-r from-[#7B2D8B] to-[#9d3fb0] text-white shadow-lg shadow-purple-200" : "bg-white text-gray-500 border border-gray-200 hover:border-purple-300 hover:text-[#7B2D8B]"}`}
+              className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${filter === f ? "bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white shadow-lg shadow-rose-200" : "bg-white text-gray-500 border border-gray-200 hover:border-rose-300 hover:text-[#E05C8A]"}`}
             >
               {f.charAt(0).toUpperCase() + f.slice(1)}
               <span
@@ -138,12 +138,12 @@ export default function PatientPrescriptions() {
           {filtered.map((rx) => (
             <div
               key={rx.id}
-              className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-purple-200 transition-all duration-300 p-5 group"
+              className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-rose-200 transition-all duration-300 p-5 group"
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#fdf0f9] to-purple-100 flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
-                    <span className="material-symbols-outlined text-[#7B2D8B] text-xl">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#fff5f7] to-rose-100 flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
+                    <span className="material-symbols-outlined text-[#E05C8A] text-xl">
                       medication
                     </span>
                   </div>
@@ -186,7 +186,7 @@ export default function PatientPrescriptions() {
                     key={label}
                     className="flex items-center gap-1.5 text-gray-500"
                   >
-                    <span className="material-symbols-outlined text-sm text-[#7B2D8B]">
+                    <span className="material-symbols-outlined text-sm text-[#E05C8A]">
                       {icon}
                     </span>
                     <span>{value}</span>
@@ -205,7 +205,7 @@ export default function PatientPrescriptions() {
 
               <button
                 onClick={() => setSelected(rx)}
-                className="w-full mt-4 py-2 bg-gradient-to-r from-[#fdf0f9] to-purple-50 text-[#7B2D8B] text-xs font-bold rounded-xl hover:from-purple-100 transition-all border border-purple-100"
+                className="w-full mt-4 py-2 bg-gradient-to-r from-[#fff5f7] to-rose-50 text-[#E05C8A] text-xs font-bold rounded-xl hover:from-rose-100 transition-all border border-rose-100"
               >
                 View Details
               </button>

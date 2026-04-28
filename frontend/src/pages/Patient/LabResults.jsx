@@ -18,7 +18,7 @@ function LabDetailModal({ lab, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden">
-        <div className="bg-gradient-to-br from-[#7B2D8B] to-[#9d3fb0] p-6 text-white relative flex-shrink-0">
+        <div className="bg-gradient-to-br from-[#E05C8A] to-[#F4845F] p-6 text-white relative flex-shrink-0">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition-colors"
@@ -63,8 +63,8 @@ function LabDetailModal({ lab, onClose }) {
                 value: lab.completedDate || "Pending",
               },
             ].map(({ icon, label, value }) => (
-              <div key={label} className="p-3 bg-[#fdf0f9]/40 rounded-xl">
-                <span className="material-symbols-outlined text-[#7B2D8B] text-lg">
+              <div key={label} className="p-3 bg-[#fff5f7]/40 rounded-xl">
+                <span className="material-symbols-outlined text-[#E05C8A] text-lg">
                   {icon}
                 </span>
                 <p className="text-xs text-gray-400 mt-1">{label}</p>
@@ -76,7 +76,7 @@ function LabDetailModal({ lab, onClose }) {
           {lab.results ? (
             <div>
               <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#7B2D8B]">
+                <span className="material-symbols-outlined text-[#E05C8A]">
                   analytics
                 </span>
                 Test Results
@@ -155,7 +155,7 @@ export default function PatientLabResults() {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h2 className="text-2xl font-black text-[#7B2D8B] flex items-center gap-2">
+          <h2 className="text-2xl font-black text-[#E05C8A] flex items-center gap-2">
             <span className="material-symbols-outlined text-3xl">biotech</span>
             Lab Results
           </h2>
@@ -171,7 +171,7 @@ export default function PatientLabResults() {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${filter === f ? "bg-gradient-to-r from-[#7B2D8B] to-[#9d3fb0] text-white shadow-lg shadow-purple-200" : "bg-white text-gray-500 border border-gray-200 hover:border-purple-300 hover:text-[#7B2D8B]"}`}
+              className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${filter === f ? "bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white shadow-lg shadow-rose-200" : "bg-white text-gray-500 border border-gray-200 hover:border-rose-300 hover:text-[#E05C8A]"}`}
             >
               {f.charAt(0).toUpperCase() + f.slice(1)}
               <span
@@ -190,7 +190,7 @@ export default function PatientLabResults() {
           {filtered.map((lab) => (
             <div
               key={lab.id}
-              className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-purple-200 transition-all duration-300 p-5 group"
+              className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-rose-200 transition-all duration-300 p-5 group"
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
@@ -228,7 +228,7 @@ export default function PatientLabResults() {
                   </span>
                   <button
                     onClick={() => setSelected(lab)}
-                    className="p-2 rounded-xl bg-gradient-to-br from-[#fdf0f9] to-purple-50 text-[#7B2D8B] hover:from-purple-100 transition-all hover:scale-110 border border-purple-100"
+                    className="p-2 rounded-xl bg-gradient-to-br from-[#fff5f7] to-rose-50 text-[#E05C8A] hover:from-rose-100 transition-all hover:scale-110 border border-rose-100"
                   >
                     <span className="material-symbols-outlined text-lg">
                       open_in_new

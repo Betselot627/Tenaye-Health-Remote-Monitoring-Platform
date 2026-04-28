@@ -69,7 +69,7 @@ function AppointmentDetailModal({ apt, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-        <div className="bg-gradient-to-br from-[#7B2D8B] to-[#9d3fb0] p-6 text-white relative">
+        <div className="bg-gradient-to-br from-[#E05C8A] to-[#F4845F] p-6 text-white relative">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition-colors"
@@ -112,9 +112,9 @@ function AppointmentDetailModal({ apt, onClose }) {
           ].map(({ icon, label, value }) => (
             <div
               key={label}
-              className="flex items-center gap-3 p-3 bg-[#fdf0f9]/40 rounded-xl"
+              className="flex items-center gap-3 p-3 bg-[#fff5f7]/40 rounded-xl"
             >
-              <span className="material-symbols-outlined text-[#7B2D8B] text-lg">
+              <span className="material-symbols-outlined text-[#E05C8A] text-lg">
                 {icon}
               </span>
               <div>
@@ -135,7 +135,7 @@ function AppointmentDetailModal({ apt, onClose }) {
         </div>
         <div className="px-6 pb-6 flex gap-3">
           {apt.status === "upcoming" && (
-            <button className="flex-1 py-2.5 bg-gradient-to-r from-[#7B2D8B] to-[#9d3fb0] text-white text-sm font-bold rounded-xl hover:scale-105 transition-all shadow-lg shadow-purple-200 flex items-center justify-center gap-2">
+            <button className="flex-1 py-2.5 bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white text-sm font-bold rounded-xl hover:scale-105 transition-all shadow-lg shadow-rose-200 flex items-center justify-center gap-2">
               <span className="material-symbols-outlined text-sm">
                 videocam
               </span>
@@ -202,7 +202,7 @@ export default function PatientAppointments() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-black text-[#7B2D8B] flex items-center gap-2">
+            <h2 className="text-2xl font-black text-[#E05C8A] flex items-center gap-2">
               <span className="material-symbols-outlined text-3xl">calendar_today</span>
               My Appointments
             </h2>
@@ -210,7 +210,7 @@ export default function PatientAppointments() {
           </div>
           <button
             onClick={() => navigate("/patient/doctors")}
-            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#7B2D8B] to-[#9d3fb0] text-white rounded-xl text-sm font-bold shadow-lg shadow-purple-300 hover:scale-105 transition-all"
+            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white rounded-xl text-sm font-bold shadow-lg shadow-rose-300 hover:scale-105 transition-all"
           >
             <span className="material-symbols-outlined text-sm">add_circle</span>
             Book New
@@ -223,7 +223,7 @@ export default function PatientAppointments() {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${filter === f ? "bg-gradient-to-r from-[#7B2D8B] to-[#9d3fb0] text-white shadow-lg shadow-purple-200" : "bg-white text-gray-500 border border-gray-200 hover:border-purple-300 hover:text-[#7B2D8B]"}`}
+              className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${filter === f ? "bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white shadow-lg shadow-rose-200" : "bg-white text-gray-500 border border-gray-200 hover:border-rose-300 hover:text-[#E05C8A]"}`}
             >
               {f.charAt(0).toUpperCase() + f.slice(1)}
               <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${filter === f ? "bg-white/20" : "bg-gray-100"}`}>
@@ -244,12 +244,12 @@ export default function PatientAppointments() {
             filtered.map((apt) => (
               <div
                 key={apt.id}
-                className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-purple-200 transition-all duration-300 p-5 group"
+                className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-rose-200 transition-all duration-300 p-5 group"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#fdf0f9] to-purple-100 flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm flex-shrink-0">
-                      <span className="material-symbols-outlined text-[#7B2D8B] text-xl">stethoscope</span>
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#fff5f7] to-rose-100 flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm flex-shrink-0">
+                      <span className="material-symbols-outlined text-[#E05C8A] text-xl">stethoscope</span>
                     </div>
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
@@ -305,7 +305,7 @@ export default function PatientAppointments() {
                     {/* View details */}
                     <button
                       onClick={() => setSelected(apt)}
-                      className="p-2 rounded-xl bg-gradient-to-br from-[#fdf0f9] to-purple-50 text-[#7B2D8B] hover:from-purple-100 transition-all hover:scale-110 border border-purple-100"
+                      className="p-2 rounded-xl bg-gradient-to-br from-[#fff5f7] to-rose-50 text-[#E05C8A] hover:from-rose-100 transition-all hover:scale-110 border border-rose-100"
                       title="View details"
                     >
                       <span className="material-symbols-outlined text-lg">open_in_new</span>
