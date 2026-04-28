@@ -7,6 +7,7 @@ import Login from "../pages/Auth/Login";
 import Register from "../pages/Auth/Register";
 import ForgotPassword from "../pages/Auth/ForgotPassword";
 import ResetPassword from "../pages/Auth/ResetPassword";
+import VideoCall from "../pages/Consultation/VideoCall";
 
 // ─── ADMIN ────────────────────────────────────────────────────────────────────
 import AdminDashboard from "../pages/Admin/Dashboard";
@@ -42,6 +43,8 @@ import PatientVitals from "../pages/Patient/Vitals";
 import PatientBilling from "../pages/Patient/Billing";
 import PatientBlogs from "../pages/Patient/Blogs";
 import PatientSettings from "../pages/Patient/Settings";
+import PaymentSuccess from "../pages/Patient/PaymentSuccess";
+import PaymentFailed from "../pages/Patient/PaymentFailed";
 
 const P = ({ children }) => <ProtectedRoute>{children}</ProtectedRoute>;
 
@@ -296,6 +299,9 @@ export default function AppRoutes() {
           </P>
         }
       />
+      <Route path="/payment/success" element={<PaymentSuccess />} />
+      <Route path="/payment/failed" element={<PaymentFailed />} />
+      <Route path="/consultation/:roomId" element={<P><VideoCall /></P>} />
 
       {/* ── 404 ── */}
       <Route path="*" element={<Navigate to="/home" replace />} />

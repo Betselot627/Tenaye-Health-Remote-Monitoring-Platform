@@ -49,7 +49,7 @@ export default function Register() {
       if (!res.ok) throw new Error(data.message || "Registration failed");
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data));
-      navigate("/dashboard");
+      navigate("/patient");
     } catch (err) {
       setError(err.message);
     } finally {
