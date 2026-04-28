@@ -48,6 +48,12 @@ export default function PatientLayout({ children, title }) {
   const [showNotifs, setShowNotifs] = useState(false);
   const [notifs, setNotifs] = useState(mockPatientNotifications);
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/login");
+  };
+
   const markRead = (id) =>
     setNotifs((p) => p.map((n) => (n.id === id ? { ...n, unread: false } : n)));
   const markAll = () =>
@@ -270,6 +276,13 @@ export default function PatientLayout({ children, title }) {
               <span className="material-symbols-outlined text-white text-lg">
                 person
               </span>
+            </button>
+            <button
+              onClick={handleLogout}
+              title="Logout"
+              className="ml-3 px-3 py-2 rounded-lg bg-rose-50 text-rose-600 font-semibold hover:bg-rose-100 transition-colors"
+            >
+              Logout
             </button>
           </div>
         </header>

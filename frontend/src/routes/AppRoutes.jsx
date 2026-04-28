@@ -43,18 +43,38 @@ import PatientBilling from "../pages/Patient/Billing";
 import PatientBlogs from "../pages/Patient/Blogs";
 import PatientSettings from "../pages/Patient/Settings";
 
-const P = ({ children }) => <ProtectedRoute>{children}</ProtectedRoute>;
+const P = ({ children, ...props }) => (
+  <ProtectedRoute {...props}>{children}</ProtectedRoute>
+);
+const Guest = ({ children }) => (
+  <ProtectedRoute guestOnly>{children}</ProtectedRoute>
+);
 
 export default function AppRoutes() {
   return (
     <Routes>
       {/* ── Default ── */}
       <Route path="/" element={<Navigate to="/home" replace />} />
+      <Route path="/dashboard" element={<Navigate to="/patient" replace />} />
 
       {/* ── Public ── */}
       <Route path="/home" element={<Home />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      <Route
+        path="/login"
+        element={
+          <Guest>
+            <Login />
+          </Guest>
+        }
+      />
+      <Route
+        path="/register"
+        element={
+          <Guest>
+            <Register />
+          </Guest>
+        }
+      />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
 
@@ -62,7 +82,7 @@ export default function AppRoutes() {
       <Route
         path="/admin"
         element={
-          <P>
+          <P allowedRoles={["admin"]}>
             <AdminDashboard />
           </P>
         }
@@ -70,7 +90,7 @@ export default function AppRoutes() {
       <Route
         path="/admin/search"
         element={
-          <P>
+          <P allowedRoles={["admin"]}>
             <AdminSearchResults />
           </P>
         }
@@ -78,7 +98,7 @@ export default function AppRoutes() {
       <Route
         path="/admin/users"
         element={
-          <P>
+          <P allowedRoles={["admin"]}>
             <AdminUsers />
           </P>
         }
@@ -86,7 +106,7 @@ export default function AppRoutes() {
       <Route
         path="/admin/doctors"
         element={
-          <P>
+          <P allowedRoles={["admin"]}>
             <AdminDoctors />
           </P>
         }
@@ -94,7 +114,7 @@ export default function AppRoutes() {
       <Route
         path="/admin/appointments"
         element={
-          <P>
+          <P allowedRoles={["admin"]}>
             <AdminAppointments />
           </P>
         }
@@ -102,7 +122,7 @@ export default function AppRoutes() {
       <Route
         path="/admin/medical-records"
         element={
-          <P>
+          <P allowedRoles={["admin"]}>
             <AdminMedicalRecords />
           </P>
         }
@@ -110,7 +130,7 @@ export default function AppRoutes() {
       <Route
         path="/admin/blogs"
         element={
-          <P>
+          <P allowedRoles={["admin"]}>
             <AdminBlogs />
           </P>
         }
@@ -118,7 +138,7 @@ export default function AppRoutes() {
       <Route
         path="/admin/payments"
         element={
-          <P>
+          <P allowedRoles={["admin"]}>
             <AdminPayments />
           </P>
         }
@@ -126,7 +146,7 @@ export default function AppRoutes() {
       <Route
         path="/admin/notifications"
         element={
-          <P>
+          <P allowedRoles={["admin"]}>
             <AdminNotifications />
           </P>
         }
@@ -134,7 +154,7 @@ export default function AppRoutes() {
       <Route
         path="/admin/settings"
         element={
-          <P>
+          <P allowedRoles={["admin"]}>
             <AdminSettings />
           </P>
         }
@@ -145,7 +165,7 @@ export default function AppRoutes() {
       <Route
         path="/doctor"
         element={
-          <P>
+          <P allowedRoles={["doctor"]}>
             <DoctorDashboard />
           </P>
         }
@@ -153,7 +173,7 @@ export default function AppRoutes() {
       <Route
         path="/doctor/appointments"
         element={
-          <P>
+          <P allowedRoles={["doctor"]}>
             <DoctorAppointments />
           </P>
         }
@@ -161,7 +181,7 @@ export default function AppRoutes() {
       <Route
         path="/doctor/patients"
         element={
-          <P>
+          <P allowedRoles={["doctor"]}>
             <DoctorPatients />
           </P>
         }
@@ -169,7 +189,7 @@ export default function AppRoutes() {
       <Route
         path="/doctor/prescriptions"
         element={
-          <P>
+          <P allowedRoles={["doctor"]}>
             <DoctorPrescriptions />
           </P>
         }
@@ -177,7 +197,7 @@ export default function AppRoutes() {
       <Route
         path="/doctor/lab-orders"
         element={
-          <P>
+          <P allowedRoles={["doctor"]}>
             <DoctorLabOrders />
           </P>
         }
@@ -185,7 +205,7 @@ export default function AppRoutes() {
       <Route
         path="/doctor/vitals"
         element={
-          <P>
+          <P allowedRoles={["doctor"]}>
             <DoctorVitals />
           </P>
         }
@@ -193,7 +213,7 @@ export default function AppRoutes() {
       <Route
         path="/doctor/blogs"
         element={
-          <P>
+          <P allowedRoles={["doctor"]}>
             <DoctorBlogs />
           </P>
         }
@@ -201,7 +221,7 @@ export default function AppRoutes() {
       <Route
         path="/doctor/earnings"
         element={
-          <P>
+          <P allowedRoles={["doctor"]}>
             <DoctorEarnings />
           </P>
         }
@@ -209,7 +229,7 @@ export default function AppRoutes() {
       <Route
         path="/doctor/schedule"
         element={
-          <P>
+          <P allowedRoles={["doctor"]}>
             <DoctorSchedule />
           </P>
         }
@@ -217,7 +237,7 @@ export default function AppRoutes() {
       <Route
         path="/doctor/settings"
         element={
-          <P>
+          <P allowedRoles={["doctor"]}>
             <DoctorSettings />
           </P>
         }
@@ -227,7 +247,7 @@ export default function AppRoutes() {
       <Route
         path="/patient"
         element={
-          <P>
+          <P allowedRoles={["patient"]}>
             <PatientDashboard />
           </P>
         }
@@ -235,7 +255,7 @@ export default function AppRoutes() {
       <Route
         path="/patient/appointments"
         element={
-          <P>
+          <P allowedRoles={["patient"]}>
             <PatientAppointments />
           </P>
         }
@@ -243,7 +263,7 @@ export default function AppRoutes() {
       <Route
         path="/patient/doctors"
         element={
-          <P>
+          <P allowedRoles={["patient"]}>
             <PatientDoctors />
           </P>
         }
@@ -251,7 +271,7 @@ export default function AppRoutes() {
       <Route
         path="/patient/prescriptions"
         element={
-          <P>
+          <P allowedRoles={["patient"]}>
             <PatientPrescriptions />
           </P>
         }
@@ -259,7 +279,7 @@ export default function AppRoutes() {
       <Route
         path="/patient/lab-results"
         element={
-          <P>
+          <P allowedRoles={["patient"]}>
             <PatientLabResults />
           </P>
         }
@@ -267,7 +287,7 @@ export default function AppRoutes() {
       <Route
         path="/patient/vitals"
         element={
-          <P>
+          <P allowedRoles={["patient"]}>
             <PatientVitals />
           </P>
         }
@@ -275,7 +295,7 @@ export default function AppRoutes() {
       <Route
         path="/patient/billing"
         element={
-          <P>
+          <P allowedRoles={["patient"]}>
             <PatientBilling />
           </P>
         }
@@ -283,7 +303,7 @@ export default function AppRoutes() {
       <Route
         path="/patient/blogs"
         element={
-          <P>
+          <P allowedRoles={["patient"]}>
             <PatientBlogs />
           </P>
         }
@@ -291,7 +311,7 @@ export default function AppRoutes() {
       <Route
         path="/patient/settings"
         element={
-          <P>
+          <P allowedRoles={["patient"]}>
             <PatientSettings />
           </P>
         }
