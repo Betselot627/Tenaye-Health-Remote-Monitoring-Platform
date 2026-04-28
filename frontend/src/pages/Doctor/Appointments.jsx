@@ -181,7 +181,14 @@ export default function DoctorAppointments() {
 
   const handleStart = (apt) => {
     setDetailModal(null);
-    navigate(`/consultation/${apt.id}`);
+    navigate(`/consultation/${apt.id}`, {
+      state: {
+        role: "doctor",
+        appointmentId: apt.id,
+        patientName: apt.patient,
+        doctorName: "Dr. " + apt.patient, // will be replaced with real doctor name from auth
+      },
+    });
   };
 
   return (
@@ -333,7 +340,13 @@ export default function DoctorAppointments() {
                       {apt.status === "upcoming" && (
                         <>
                           <button
-                            onClick={() => navigate(`/consultation/${apt.id}`)}
+                            onClick={() => navigate(`/consultation/${apt.id}`, {
+                              state: {
+                                role: "doctor",
+                                appointmentId: apt.id,
+                                patientName: apt.patient,
+                              },
+                            })}
                             className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                             title="Start consultation"
                           >

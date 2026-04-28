@@ -6,7 +6,15 @@ import { mockPatientAppointments } from "./data/mockData";
 // ─── Cancel confirmation modal ─────────────────────────────────────────────────
 function CancelModal({ apt, onConfirm, onClose }) {
   const hoursUntil = apt
-    ? Math.floor((new Date(`${apt.date}T${apt.time.replace(" AM", "").replace(" PM", "")}`) - new Date()) / 36e5)
+    ? (() => {
+        // Properly convert 12-hour time to 24-hour for Date parsing
+        const [time, period] = apt.time.split(" ");
+        let [hours, minutes] = time.split(":").map(Number);
+        if (period === "PM" && hours !== 12) hours += 12;
+        if (period === "AM" && hours === 12) hours = 0;
+        const aptDate = new Date(`${apt.date}T${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:00`);
+        return Math.floor((aptDate - new Date()) / 36e5);
+      })()
     : 0;
   const eligible = hoursUntil >= 24;
 
@@ -66,6 +74,7 @@ const statusIcons = {
 };
 
 function AppointmentDetailModal({ apt, onClose }) {
+  const navigate = useNavigate();
   return (
     <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
@@ -135,7 +144,16 @@ function AppointmentDetailModal({ apt, onClose }) {
         </div>
         <div className="px-6 pb-6 flex gap-3">
           {apt.status === "upcoming" && (
-            <button className="flex-1 py-2.5 bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white text-sm font-bold rounded-xl hover:scale-105 transition-all shadow-lg shadow-rose-200 flex items-center justify-center gap-2">
+            <button
+              onClick={() => navigate(`/consultation/${apt.id}`, {
+                state: {
+                  role: "patient",
+                  appointmentId: apt.id,
+                  doctorName: apt.doctor,
+                  patientName: "Bereket Tadesse",
+                },
+              })}
+              className="flex-1 py-2.5 bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white text-sm font-bold rounded-xl hover:scale-105 transition-all shadow-lg shadow-rose-200 flex items-center justify-center gap-2">
               <span className="material-symbols-outlined text-sm">
                 videocam
               </span>
