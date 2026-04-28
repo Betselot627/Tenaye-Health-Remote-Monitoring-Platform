@@ -49,7 +49,7 @@ export default function Register() {
       if (!res.ok) throw new Error(data.message || "Registration failed");
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data));
-      navigate("/dashboard");
+      navigate("/patient");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -172,6 +172,15 @@ export default function Register() {
               className="text-[#632a7e] font-semibold hover:underline"
             >
               Sign in
+            </Link>
+          </p>
+          <p className="text-center text-sm text-gray-400 mt-2">
+            Are you a doctor?{" "}
+            <Link
+              to="/apply-doctor"
+              className="text-[#632a7e] font-semibold hover:underline"
+            >
+              Apply here
             </Link>
           </p>
         </div>

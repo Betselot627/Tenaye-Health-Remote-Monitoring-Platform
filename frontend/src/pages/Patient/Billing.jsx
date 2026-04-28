@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import PatientLayout from "./components/PatientLayout";
 import { mockBilling } from "./data/mockData";
 
@@ -85,6 +86,7 @@ function ReceiptModal({ payment, onClose }) {
 }
 
 export default function PatientBilling() {
+  const navigate = useNavigate();
   const [payments] = useState(mockBilling);
   const [filter, setFilter] = useState("all");
   const [selected, setSelected] = useState(null);
@@ -219,7 +221,20 @@ export default function PatientBilling() {
                       {pay.status}
                     </span>
                   </div>
-                  {pay.receipt && (
+                  {pay.status === "pending" && (
+                    <button
+                      onClick={() =>
+                        navigate("/patient/doctors", {
+                          state: { pendingPayment: pay },
+                        })
+                      }
+                      className="px-4 py-2 bg-gradient-to-r from-[#7B2D8B] to-[#9d3fb0] text-white text-xs font-bold rounded-xl hover:scale-105 transition-all shadow-md shadow-purple-200 flex items-center gap-1.5"
+                    >
+                      <span className="material-symbols-outlined text-sm">payments</span>
+                      Pay Now
+                    </button>
+                  )}
+                  {pay.receipt && pay.status !== "pending" && (
                     <button
                       onClick={() => setSelected(pay)}
                       className="p-2 rounded-xl bg-gradient-to-br from-[#fff5f7] to-rose-50 text-[#E05C8A] hover:from-rose-100 transition-all hover:scale-110 border border-rose-100"
