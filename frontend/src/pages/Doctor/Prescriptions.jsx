@@ -85,7 +85,7 @@ function NewPrescriptionModal({ onClose, onSave }) {
                 placeholder={placeholder}
                 value={form[key]}
                 onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#7B2D8B]/20"
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0D7377]/20"
               />
             </div>
           ))}
@@ -99,7 +99,7 @@ function NewPrescriptionModal({ onClose, onSave }) {
             </button>
             <button
               type="submit"
-              className="flex-1 py-3 bg-[#7B2D8B] text-white rounded-xl font-bold text-sm hover:bg-[#6a2578] transition-colors"
+              className="flex-1 py-3 bg-[#0D7377] text-white rounded-xl font-bold text-sm hover:bg-[#0a5c60] transition-colors"
             >
               Save Prescription
             </button>
@@ -145,7 +145,7 @@ export default function DoctorPrescriptions() {
     return (
       <DoctorLayout title="Prescriptions">
         <div className="flex items-center justify-center h-64">
-          <div className="w-8 h-8 border-4 border-[#7B2D8B] border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-[#0D7377] border-t-transparent rounded-full animate-spin" />
         </div>
       </DoctorLayout>
     );
@@ -177,12 +177,12 @@ export default function DoctorPrescriptions() {
               placeholder="Search prescriptions..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#7B2D8B]/20"
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0D7377]/20"
             />
           </div>
           <button
             onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-[#7B2D8B] text-white rounded-xl font-bold text-sm hover:bg-[#6a2578] transition-colors"
+            className="flex items-center gap-2 px-5 py-2.5 bg-[#0D7377] text-white rounded-xl font-bold text-sm hover:bg-[#0a5c60] transition-colors"
           >
             <span className="material-symbols-outlined text-lg">add</span>
             New Prescription

@@ -37,7 +37,7 @@ export default function PatientSettings() {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h2 className="text-2xl font-black text-[#7B2D8B] flex items-center gap-2">
+          <h2 className="text-2xl font-black text-[#E05C8A] flex items-center gap-2">
             <span className="material-symbols-outlined text-3xl">settings</span>
             Settings
           </h2>
@@ -55,7 +55,7 @@ export default function PatientSettings() {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all
-                    ${activeTab === tab.id ? "bg-gradient-to-r from-[#7B2D8B] to-[#9d3fb0] text-white shadow-lg shadow-purple-200" : "text-gray-500 hover:bg-[#fdf0f9] hover:text-[#7B2D8B]"}`}
+                    ${activeTab === tab.id ? "bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white shadow-lg shadow-rose-200" : "text-gray-500 hover:bg-[#fff5f7] hover:text-[#E05C8A]"}`}
                 >
                   <span
                     className={`material-symbols-outlined text-xl ${activeTab === tab.id ? "text-white" : "text-gray-400"}`}
@@ -69,14 +69,14 @@ export default function PatientSettings() {
 
             {/* Profile card */}
             <div className="mt-4 bg-white rounded-2xl shadow-sm border border-gray-100 p-4 text-center">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#7B2D8B] to-[#9d3fb0] flex items-center justify-center mx-auto shadow-lg">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#E05C8A] to-[#F4845F] flex items-center justify-center mx-auto shadow-lg">
                 <span className="material-symbols-outlined text-white text-2xl">
                   person
                 </span>
               </div>
               <p className="font-black text-gray-800 mt-3">{profile.name}</p>
               <p className="text-xs text-gray-400">{profile.email}</p>
-              <span className="mt-2 inline-block text-xs font-bold px-2.5 py-1 bg-purple-100 text-[#7B2D8B] rounded-full">
+              <span className="mt-2 inline-block text-xs font-bold px-2.5 py-1 bg-rose-100 text-[#E05C8A] rounded-full">
                 Patient
               </span>
             </div>
@@ -88,7 +88,7 @@ export default function PatientSettings() {
             {activeTab === "profile" && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-5">
                 <h3 className="font-black text-gray-800 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[#7B2D8B]">
+                  <span className="material-symbols-outlined text-[#E05C8A]">
                     person
                   </span>
                   Personal Information
@@ -114,7 +114,7 @@ export default function PatientSettings() {
                         onChange={(e) =>
                           setProfile({ ...profile, [key]: e.target.value })
                         }
-                        className="w-full mt-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7B2D8B] focus:ring-2 focus:ring-purple-100 transition-all"
+                        className="w-full mt-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#E05C8A] focus:ring-2 focus:ring-rose-100 transition-all"
                       />
                     </div>
                   ))}
@@ -127,7 +127,7 @@ export default function PatientSettings() {
                       onChange={(e) =>
                         setProfile({ ...profile, gender: e.target.value })
                       }
-                      className="w-full mt-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7B2D8B] bg-white"
+                      className="w-full mt-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#E05C8A] bg-white"
                     >
                       {["Male", "Female", "Other"].map((g) => (
                         <option key={g}>{g}</option>
@@ -143,7 +143,7 @@ export default function PatientSettings() {
                       onChange={(e) =>
                         setProfile({ ...profile, bloodType: e.target.value })
                       }
-                      className="w-full mt-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7B2D8B] bg-white"
+                      className="w-full mt-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#E05C8A] bg-white"
                     >
                       {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map(
                         (b) => (
@@ -190,9 +190,9 @@ export default function PatientSettings() {
                 </div>
 
                 {/* Emergency contact */}
-                <div className="p-4 bg-[#fdf0f9]/50 rounded-xl border border-purple-100">
+                <div className="p-4 bg-[#fff5f7]/50 rounded-xl border border-rose-100">
                   <h4 className="text-sm font-black text-gray-700 mb-3 flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[#7B2D8B] text-lg">
+                    <span className="material-symbols-outlined text-[#E05C8A] text-lg">
                       emergency
                     </span>
                     Emergency Contact
@@ -218,7 +218,7 @@ export default function PatientSettings() {
                               },
                             })
                           }
-                          className="w-full mt-1 px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7B2D8B] focus:ring-2 focus:ring-purple-100"
+                          className="w-full mt-1 px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#E05C8A] focus:ring-2 focus:ring-rose-100"
                         />
                       </div>
                     ))}
@@ -227,7 +227,7 @@ export default function PatientSettings() {
 
                 <button
                   onClick={handleSave}
-                  className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg ${saved ? "bg-emerald-500 text-white shadow-emerald-200" : "bg-gradient-to-r from-[#7B2D8B] to-[#9d3fb0] text-white shadow-purple-200 hover:scale-105"}`}
+                  className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg ${saved ? "bg-emerald-500 text-white shadow-emerald-200" : "bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white shadow-rose-200 hover:scale-105"}`}
                 >
                   <span className="material-symbols-outlined text-sm">
                     {saved ? "check_circle" : "save"}
@@ -241,7 +241,7 @@ export default function PatientSettings() {
             {activeTab === "security" && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-5">
                 <h3 className="font-black text-gray-800 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[#7B2D8B]">
+                  <span className="material-symbols-outlined text-[#E05C8A]">
                     lock
                   </span>
                   Change Password
@@ -265,13 +265,13 @@ export default function PatientSettings() {
                             [key]: e.target.value,
                           })
                         }
-                        className="w-full mt-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7B2D8B] focus:ring-2 focus:ring-purple-100"
+                        className="w-full mt-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#E05C8A] focus:ring-2 focus:ring-rose-100"
                       />
                     </div>
                   ))}
                   <button
                     onClick={handleSave}
-                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg ${saved ? "bg-emerald-500 text-white shadow-emerald-200" : "bg-gradient-to-r from-[#7B2D8B] to-[#9d3fb0] text-white shadow-purple-200 hover:scale-105"}`}
+                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg ${saved ? "bg-emerald-500 text-white shadow-emerald-200" : "bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white shadow-rose-200 hover:scale-105"}`}
                   >
                     <span className="material-symbols-outlined text-sm">
                       {saved ? "check_circle" : "lock_reset"}
@@ -301,7 +301,7 @@ export default function PatientSettings() {
             {activeTab === "notifications" && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
                 <h3 className="font-black text-gray-800 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[#7B2D8B]">
+                  <span className="material-symbols-outlined text-[#E05C8A]">
                     notifications
                   </span>
                   Notification Preferences
@@ -344,11 +344,11 @@ export default function PatientSettings() {
                     return (
                       <div
                         key={key}
-                        className="flex items-center justify-between p-4 bg-[#fdf0f9]/30 rounded-xl border border-purple-50 hover:border-purple-200 transition-all"
+                        className="flex items-center justify-between p-4 bg-[#fff5f7]/30 rounded-xl border border-rose-50 hover:border-rose-200 transition-all"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#fdf0f9] to-purple-100 flex items-center justify-center">
-                            <span className="material-symbols-outlined text-[#7B2D8B] text-lg">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#fff5f7] to-rose-100 flex items-center justify-center">
+                            <span className="material-symbols-outlined text-[#E05C8A] text-lg">
                               {icon}
                             </span>
                           </div>
@@ -366,7 +366,7 @@ export default function PatientSettings() {
                               [key]: !value,
                             })
                           }
-                          className={`relative w-12 h-6 rounded-full transition-all duration-300 ${value ? "bg-gradient-to-r from-[#7B2D8B] to-[#9d3fb0]" : "bg-gray-200"}`}
+                          className={`relative w-12 h-6 rounded-full transition-all duration-300 ${value ? "bg-gradient-to-r from-[#E05C8A] to-[#F4845F]" : "bg-gray-200"}`}
                         >
                           <span
                             className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-all duration-300 ${value ? "left-6" : "left-0.5"}`}
@@ -378,7 +378,7 @@ export default function PatientSettings() {
                 </div>
                 <button
                   onClick={handleSave}
-                  className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg ${saved ? "bg-emerald-500 text-white shadow-emerald-200" : "bg-gradient-to-r from-[#7B2D8B] to-[#9d3fb0] text-white shadow-purple-200 hover:scale-105"}`}
+                  className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg ${saved ? "bg-emerald-500 text-white shadow-emerald-200" : "bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white shadow-rose-200 hover:scale-105"}`}
                 >
                   <span className="material-symbols-outlined text-sm">
                     {saved ? "check_circle" : "save"}
@@ -392,7 +392,7 @@ export default function PatientSettings() {
             {activeTab === "privacy" && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
                 <h3 className="font-black text-gray-800 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[#7B2D8B]">
+                  <span className="material-symbols-outlined text-[#E05C8A]">
                     shield
                   </span>
                   Privacy & Data
@@ -417,7 +417,7 @@ export default function PatientSettings() {
                   ].map(({ label, desc, enabled }) => (
                     <div
                       key={label}
-                      className="flex items-center justify-between p-4 bg-[#fdf0f9]/30 rounded-xl border border-purple-50"
+                      className="flex items-center justify-between p-4 bg-[#fff5f7]/30 rounded-xl border border-rose-50"
                     >
                       <div>
                         <p className="text-sm font-bold text-gray-800">
@@ -426,7 +426,7 @@ export default function PatientSettings() {
                         <p className="text-xs text-gray-400">{desc}</p>
                       </div>
                       <button
-                        className={`relative w-12 h-6 rounded-full transition-all duration-300 ${enabled ? "bg-gradient-to-r from-[#7B2D8B] to-[#9d3fb0]" : "bg-gray-200"}`}
+                        className={`relative w-12 h-6 rounded-full transition-all duration-300 ${enabled ? "bg-gradient-to-r from-[#E05C8A] to-[#F4845F]" : "bg-gray-200"}`}
                       >
                         <span
                           className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-all duration-300 ${enabled ? "left-6" : "left-0.5"}`}

@@ -47,7 +47,7 @@ function Toast({ message, type, onClose }) {
   return (
     <div
       className={`fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl text-white text-sm font-semibold
-      ${type === "success" ? "bg-emerald-600" : type === "error" ? "bg-red-600" : "bg-[#7B2D8B]"}`}
+      ${type === "success" ? "bg-emerald-600" : type === "error" ? "bg-red-600" : "bg-[#0D7377]"}`}
     >
       <span className="material-symbols-outlined text-lg">
         {type === "success"
@@ -91,7 +91,7 @@ function CreatePostModal({ onClose, onPublish }) {
               Title
             </label>
             <input
-              className="w-full bg-[#fdf0f9] border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-200"
+              className="w-full bg-[#f0fafa] border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-200"
               placeholder="Post title..."
               value={form.title}
               onChange={(e) => update("title", e.target.value)}
@@ -102,7 +102,7 @@ function CreatePostModal({ onClose, onPublish }) {
               Category
             </label>
             <select
-              className="w-full bg-[#fdf0f9] border-none rounded-xl px-4 py-3 text-sm focus:outline-none"
+              className="w-full bg-[#f0fafa] border-none rounded-xl px-4 py-3 text-sm focus:outline-none"
               value={form.category}
               onChange={(e) => update("category", e.target.value)}
             >
@@ -124,7 +124,7 @@ function CreatePostModal({ onClose, onPublish }) {
               Content
             </label>
             <textarea
-              className="w-full bg-[#fdf0f9] border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-200 resize-none h-40"
+              className="w-full bg-[#f0fafa] border-none rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-200 resize-none h-40"
               placeholder="Write your post content here..."
               value={form.content}
               onChange={(e) => update("content", e.target.value)}
@@ -141,7 +141,7 @@ function CreatePostModal({ onClose, onPublish }) {
                   onClick={() => update("status", s)}
                   className={`flex-1 py-2.5 rounded-xl text-sm font-bold capitalize transition-colors ${
                     form.status === s
-                      ? "bg-[#7B2D8B] text-white"
+                      ? "bg-[#0D7377] text-white"
                       : "bg-gray-100 text-gray-500 hover:bg-gray-200"
                   }`}
                 >
@@ -160,7 +160,7 @@ function CreatePostModal({ onClose, onPublish }) {
             <button
               onClick={() => onPublish(form)}
               disabled={!form.title.trim() || !form.content.trim()}
-              className="flex-1 px-4 py-3 bg-[#7B2D8B] text-white rounded-xl font-bold text-sm hover:bg-purple-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-3 bg-[#0D7377] text-white rounded-xl font-bold text-sm hover:bg-purple-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {form.status === "published" ? "Publish" : "Save Draft"}
             </button>
@@ -189,7 +189,7 @@ export default function DoctorBlogs() {
     return (
       <DoctorLayout title="My Blogs">
         <div className="flex items-center justify-center h-64">
-          <div className="w-8 h-8 border-4 border-[#7B2D8B] border-t-transparent rounded-full animate-spin"></div>
+          <div className="w-8 h-8 border-4 border-[#0D7377] border-t-transparent rounded-full animate-spin"></div>
         </div>
       </DoctorLayout>
     );
@@ -243,14 +243,14 @@ export default function DoctorBlogs() {
 
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
         <div>
-          <h2 className="text-3xl font-black text-[#7B2D8B]">My Blogs</h2>
+          <h2 className="text-3xl font-black text-[#0D7377]">My Blogs</h2>
           <p className="text-gray-400 mt-1">
             Share your medical knowledge with patients
           </p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#7B2D8B] to-[#9d3fb0] text-white rounded-full font-bold shadow-lg shadow-purple-200 hover:shadow-purple-400 hover:scale-105 transition-all"
+          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#0D7377] to-[#14A085] text-white rounded-full font-bold shadow-lg shadow-teal-200 hover:shadow-purple-400 hover:scale-105 transition-all"
         >
           <span className="material-symbols-outlined text-sm">edit</span>
           Write New Post
@@ -275,7 +275,7 @@ export default function DoctorBlogs() {
           {
             label: "Total Likes",
             value: blogs.reduce((sum, b) => sum + b.likes, 0),
-            color: "text-[#7B2D8B]",
+            color: "text-[#0D7377]",
             bg: "bg-white",
           },
         ].map((s) => (
@@ -297,8 +297,8 @@ export default function DoctorBlogs() {
               onClick={() => setActiveTab(tab)}
               className={`px-4 py-2 rounded-full text-sm font-bold capitalize transition-colors ${
                 activeTab === tab
-                  ? "bg-[#7B2D8B] text-white"
-                  : "text-gray-400 hover:bg-[#fdf0f9]"
+                  ? "bg-[#0D7377] text-white"
+                  : "text-gray-400 hover:bg-[#f0fafa]"
               }`}
             >
               {tab === "all"
@@ -322,15 +322,15 @@ export default function DoctorBlogs() {
             filtered.map((blog) => (
               <div
                 key={blog.id}
-                className="bg-[#fdf0f9] rounded-2xl p-5 flex flex-col gap-3"
+                className="bg-[#f0fafa] rounded-2xl p-5 flex flex-col gap-3"
               >
-                <div className="w-full h-32 bg-gradient-to-br from-[#7B2D8B]/20 to-[#600f72]/10 rounded-xl flex items-center justify-center">
-                  <span className="material-symbols-outlined text-4xl text-[#7B2D8B]/30">
+                <div className="w-full h-32 bg-gradient-to-br from-[#0D7377]/20 to-[#600f72]/10 rounded-xl flex items-center justify-center">
+                  <span className="material-symbols-outlined text-4xl text-[#0D7377]/30">
                     article
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="px-2 py-0.5 bg-white text-[#7B2D8B] text-xs font-bold rounded-full">
+                  <span className="px-2 py-0.5 bg-white text-[#0D7377] text-xs font-bold rounded-full">
                     {blog.category}
                   </span>
                   <span

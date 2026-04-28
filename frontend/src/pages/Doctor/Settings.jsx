@@ -125,7 +125,7 @@ export default function DoctorSettings() {
 
       <div className="space-y-6 max-w-2xl">
         {/* Live preview card */}
-        <div className="bg-gradient-to-br from-[#7B2D8B] to-[#9d3fb0] rounded-2xl p-5 text-white flex items-center gap-4">
+        <div className="bg-gradient-to-br from-[#0D7377] to-[#14A085] rounded-2xl p-5 text-white flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-xl font-black shrink-0">
             {initials}
           </div>
@@ -171,7 +171,7 @@ export default function DoctorSettings() {
                     onChange={(e) =>
                       setProfile({ ...profile, [key]: e.target.value })
                     }
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#7B2D8B]/20"
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0D7377]/20"
                   />
                 </div>
               ))}
@@ -186,12 +186,12 @@ export default function DoctorSettings() {
                 onChange={(e) =>
                   setProfile({ ...profile, bio: e.target.value })
                 }
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#7B2D8B]/20 resize-none"
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0D7377]/20 resize-none"
               />
             </div>
             <button
               type="submit"
-              className="px-6 py-2.5 bg-[#7B2D8B] text-white rounded-xl font-bold text-sm hover:bg-[#6a2578] transition-colors"
+              className="px-6 py-2.5 bg-[#0D7377] text-white rounded-xl font-bold text-sm hover:bg-[#0a5c60] transition-colors"
             >
               Save Changes
             </button>
@@ -219,13 +219,13 @@ export default function DoctorSettings() {
                   onChange={(e) =>
                     setPasswords({ ...passwords, [key]: e.target.value })
                   }
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#7B2D8B]/20"
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0D7377]/20"
                 />
               </div>
             ))}
             <button
               type="submit"
-              className="px-6 py-2.5 bg-[#7B2D8B] text-white rounded-xl font-bold text-sm hover:bg-[#6a2578] transition-colors"
+              className="px-6 py-2.5 bg-[#0D7377] text-white rounded-xl font-bold text-sm hover:bg-[#0a5c60] transition-colors"
             >
               Update Password
             </button>
@@ -272,13 +272,13 @@ export default function DoctorSettings() {
                 className="flex items-center gap-4 py-3 px-3 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer group"
                 onClick={() => navigate(notificationRoutes[key])}
               >
-                <div className="w-9 h-9 rounded-xl bg-[#fdf0f9] flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-[#7B2D8B] text-lg">
+                <div className="w-9 h-9 rounded-xl bg-[#f0fafa] flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[#0D7377] text-lg">
                     {icon}
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-800 group-hover:text-[#7B2D8B] transition-colors">
+                  <p className="text-sm font-semibold text-gray-800 group-hover:text-[#0D7377] transition-colors">
                     {label}
                   </p>
                   <p className="text-xs text-gray-400">{desc}</p>
@@ -292,7 +292,7 @@ export default function DoctorSettings() {
                     }));
                   }}
                   className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${
-                    notifications[key] ? "bg-[#7B2D8B]" : "bg-gray-200"
+                    notifications[key] ? "bg-[#0D7377]" : "bg-gray-200"
                   }`}
                 >
                   <span
@@ -301,7 +301,7 @@ export default function DoctorSettings() {
                     }`}
                   />
                 </button>
-                <span className="material-symbols-outlined text-gray-300 text-base group-hover:text-[#7B2D8B] transition-colors">
+                <span className="material-symbols-outlined text-gray-300 text-base group-hover:text-[#0D7377] transition-colors">
                   chevron_right
                 </span>
               </div>

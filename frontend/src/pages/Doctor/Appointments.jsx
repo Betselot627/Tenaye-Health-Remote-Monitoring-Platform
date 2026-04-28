@@ -6,7 +6,7 @@ import { mockDoctorAppointments } from "./data/mockData";
 const statusColors = {
   upcoming: "bg-blue-100 text-blue-700",
   completed: "bg-emerald-100 text-emerald-700",
-  in_progress: "bg-purple-100 text-purple-700",
+  in_progress: "bg-teal-100 text-purple-700",
   cancelled: "bg-red-100 text-red-700",
 };
 
@@ -71,8 +71,8 @@ function AppointmentDetailModal({ apt, onClose, onStart }) {
           </button>
         </div>
         <div className="space-y-4">
-          <div className="flex items-center gap-4 p-4 bg-[#fdf0f9] rounded-xl">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#7B2D8B] to-[#9d3fb0] flex items-center justify-center text-white font-black text-xl shadow-lg">
+          <div className="flex items-center gap-4 p-4 bg-[#f0fafa] rounded-xl">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#0D7377] to-[#14A085] flex items-center justify-center text-white font-black text-xl shadow-lg">
               {apt.patient[0]}
             </div>
             <div>
@@ -94,7 +94,7 @@ function AppointmentDetailModal({ apt, onClose, onStart }) {
               className="flex items-center justify-between py-2 border-b border-gray-50"
             >
               <div className="flex items-center gap-2 text-gray-500 text-sm">
-                <span className="material-symbols-outlined text-base text-[#7B2D8B]">
+                <span className="material-symbols-outlined text-base text-[#0D7377]">
                   {row.icon}
                 </span>
                 {row.label}
@@ -123,7 +123,7 @@ function AppointmentDetailModal({ apt, onClose, onStart }) {
           {apt.status === "upcoming" && (
             <button
               onClick={() => onStart(apt)}
-              className="flex-1 px-4 py-3 bg-gradient-to-r from-[#7B2D8B] to-[#9d3fb0] text-white rounded-xl font-bold text-sm hover:shadow-lg transition-all"
+              className="flex-1 px-4 py-3 bg-gradient-to-r from-[#0D7377] to-[#14A085] text-white rounded-xl font-bold text-sm hover:shadow-lg transition-all"
             >
               Start Consultation
             </button>
@@ -154,7 +154,7 @@ export default function DoctorAppointments() {
     return (
       <DoctorLayout title="Appointments">
         <div className="flex items-center justify-center h-64">
-          <div className="w-8 h-8 border-4 border-[#7B2D8B] border-t-transparent rounded-full animate-spin"></div>
+          <div className="w-8 h-8 border-4 border-[#0D7377] border-t-transparent rounded-full animate-spin"></div>
         </div>
       </DoctorLayout>
     );
@@ -212,7 +212,7 @@ export default function DoctorAppointments() {
 
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
         <div>
-          <h2 className="text-3xl font-black text-[#7B2D8B]">
+          <h2 className="text-3xl font-black text-[#0D7377]">
             My Appointments
           </h2>
           <p className="text-gray-400 mt-1">
@@ -227,7 +227,7 @@ export default function DoctorAppointments() {
           {
             label: "Today's Total",
             value: appointments.filter((a) => a.date === "2025-04-26").length,
-            color: "text-[#7B2D8B]",
+            color: "text-[#0D7377]",
             bg: "bg-white",
           },
           {
@@ -268,8 +268,8 @@ export default function DoctorAppointments() {
                 onClick={() => setActiveTab(tab)}
                 className={`px-4 py-2 rounded-full text-sm font-bold capitalize transition-colors ${
                   activeTab === tab
-                    ? "bg-[#7B2D8B] text-white"
-                    : "text-gray-400 hover:bg-[#fdf0f9]"
+                    ? "bg-[#0D7377] text-white"
+                    : "text-gray-400 hover:bg-[#f0fafa]"
                 }`}
               >
                 {tab === "all" ? "All" : tab.replace("_", " ")}
@@ -281,7 +281,7 @@ export default function DoctorAppointments() {
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-[#fdf0f9]/50 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+              <tr className="bg-[#f0fafa]/50 text-[10px] font-bold uppercase tracking-widest text-gray-400">
                 <th className="px-6 py-5">ID</th>
                 <th className="px-6 py-5">Patient</th>
                 <th className="px-6 py-5">Type</th>
@@ -295,7 +295,7 @@ export default function DoctorAppointments() {
               {filtered.map((apt) => (
                 <tr
                   key={apt.id}
-                  className="hover:bg-purple-50/20 transition-colors"
+                  className="hover:bg-teal-50/20 transition-colors"
                 >
                   <td className="px-6 py-4 font-mono text-xs text-gray-400">
                     {apt.id}
@@ -323,7 +323,7 @@ export default function DoctorAppointments() {
                     <div className="flex justify-end gap-2">
                       <button
                         onClick={() => setDetailModal(apt)}
-                        className="p-2 text-[#7B2D8B] hover:bg-purple-50 rounded-lg transition-colors"
+                        className="p-2 text-[#0D7377] hover:bg-teal-50 rounded-lg transition-colors"
                         title="View details"
                       >
                         <span className="material-symbols-outlined text-xl">
@@ -360,7 +360,7 @@ export default function DoctorAppointments() {
           </table>
         </div>
 
-        <div className="px-6 py-4 bg-[#fdf0f9]/30 border-t border-gray-50 flex justify-between items-center">
+        <div className="px-6 py-4 bg-[#f0fafa]/30 border-t border-gray-50 flex justify-between items-center">
           <p className="text-xs text-gray-400 font-medium">
             Showing {filtered.length} appointments
           </p>
@@ -370,7 +370,7 @@ export default function DoctorAppointments() {
                 chevron_left
               </span>
             </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#7B2D8B] text-white font-bold text-xs">
+            <button className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#0D7377] text-white font-bold text-xs">
               1
             </button>
             <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white text-gray-400 transition-colors">
