@@ -3,7 +3,7 @@ import Doctor from "../models/Doctor.js";
 export const getDoctors = async (req, res) => {
   try {
     const { specialty, search } = req.query;
-    const filter = { is_verified: true };
+    const filter = { status: "approved", is_verified: true };
     if (specialty) filter.specialty = specialty;
     const doctors = await Doctor.find(filter)
       .populate("user", "full_name avatar_url")

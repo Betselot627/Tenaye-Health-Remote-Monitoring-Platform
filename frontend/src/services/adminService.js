@@ -21,6 +21,23 @@ import {
   mockActivity,
 } from "../pages/Admin/data/mockData";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+
+const readResponseError = async (response) => {
+  const contentType = response.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) {
+    try {
+      const payload = await response.json();
+      return payload.message || "Request failed";
+    } catch {
+      return "Request failed";
+    }
+  }
+
+  const text = await response.text();
+  return text || `Request failed with status ${response.status}`;
+};
+
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
 
 /**
@@ -83,7 +100,21 @@ export const unblockUser = async (userId) => {
  *   .order("created_at", { ascending: false })
  */
 export const getDoctors = async () => {
-  return { data: mockDoctors, error: null };
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${API_BASE_URL}/api/admin/doctors`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) {
+      throw new Error(await readResponseError(response));
+    }
+
+    const data = await response.json();
+    return { data, error: null };
+  } catch (err) {
+    return { data: null, error: err.message };
+  }
 };
 
 /**
@@ -94,7 +125,13 @@ export const getDoctors = async () => {
  *   .order("created_at", { ascending: false })
  */
 export const getPendingDoctorApplications = async () => {
-  return { data: mockDoctors.filter(d => d.status === "pending"), error: null };
+  try {
+    const { data, error } = await getDoctors();
+    if (error) throw new Error(error);
+    return { data: data.filter((doctor) => doctor.status === "pending"), error: null };
+  } catch (err) {
+    return { data: null, error: err.message };
+  }
 };
 
 /**
@@ -108,7 +145,25 @@ export const getPendingDoctorApplications = async () => {
  * // 4. Send email with credentials (via Edge Function)
  */
 export const approveDoctor = async (doctorId) => {
-  return { error: null };
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${API_BASE_URL}/api/admin/doctors/${doctorId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ status: "approved" }),
+    });
+
+    if (!response.ok) {
+      throw new Error(await readResponseError(response));
+    }
+
+    return { error: null };
+  } catch (err) {
+    return { error: err.message };
+  }
 };
 
 /**
@@ -119,7 +174,25 @@ export const approveDoctor = async (doctorId) => {
  * // Then trigger Edge Function to send rejection email
  */
 export const rejectDoctor = async (doctorId, reason) => {
-  return { error: null };
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${API_BASE_URL}/api/admin/doctors/${doctorId}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ reason }),
+    });
+
+    if (!response.ok) {
+      throw new Error(await readResponseError(response));
+    }
+
+    return { error: null };
+  } catch (err) {
+    return { error: err.message };
+  }
 };
 
 /**
@@ -128,7 +201,25 @@ export const rejectDoctor = async (doctorId, reason) => {
  * // Also ban their auth account temporarily
  */
 export const suspendDoctor = async (doctorId) => {
-  return { error: null };
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${API_BASE_URL}/api/admin/doctors/${doctorId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ status: "suspended" }),
+    });
+
+    if (!response.ok) {
+      throw new Error(await readResponseError(response));
+    }
+
+    return { error: null };
+  } catch (err) {
+    return { error: err.message };
+  }
 };
 
 /**
@@ -137,7 +228,7 @@ export const suspendDoctor = async (doctorId) => {
  * // Unban their auth account
  */
 export const reinstateDoctor = async (doctorId) => {
-  return { error: null };
+  return approveDoctor(doctorId);
 };
 
 // ─── APPOINTMENTS ─────────────────────────────────────────────────────────────

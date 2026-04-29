@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import AdminLayout from "./components/AdminLayout";
-import { getDoctors } from "../../services/adminService";
+import { getDoctors, approveDoctor, rejectDoctor, suspendDoctor, reinstateDoctor } from "../../services/adminService";
 import { exportDoctors } from "../../utils/exportUtils";
 
 const statusColors = {
@@ -21,7 +21,7 @@ const doctorDetails = {
 // Simple Toast component
 function Toast({ message, type, onClose }) {
   return (
-    <div className={`fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl text-white text-sm font-semibold animate-bounce-in
+    <div className={`fixed bottom-6 right-6 z-100 flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl text-white text-sm font-semibold animate-bounce-in
       ${type === "success" ? "bg-emerald-600" : type === "error" ? "bg-red-600" : "bg-[#7B2D8B]"}`}>
       <span className="material-symbols-outlined text-lg">
         {type === "success" ? "check_circle" : type === "error" ? "error" : "info"}
@@ -59,12 +59,13 @@ function ConfirmModal({ title, message, confirmLabel, confirmColor = "bg-red-600
 function DoctorDetailModal({ doc, details, onClose, onApprove, onReject }) {
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectForm, setShowRejectForm] = useState(false);
+  const detail = details || {};
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="bg-gradient-to-r from-[#7B2D8B] to-[#600f72] p-6 rounded-t-2xl">
+        <div className="bg-linear-to-r from-[#7B2D8B] to-[#600f72] p-6 rounded-t-2xl">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-white font-bold text-lg">Doctor Application</h3>
             <button onClick={onClose} className="text-white/70 hover:text-white transition-colors">
@@ -90,7 +91,7 @@ function DoctorDetailModal({ doc, details, onClose, onApprove, onReject }) {
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-[#fdf0f9] p-4 rounded-xl">
               <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">License No.</p>
-              <p className="text-sm font-bold text-gray-800">{details?.license || "N/A"}</p>
+              <p className="text-sm font-bold text-gray-800">{detail.license || doc.license_number || "N/A"}</p>
             </div>
             <div className="bg-[#fdf0f9] p-4 rounded-xl">
               <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Consultation Fee</p>
@@ -98,22 +99,22 @@ function DoctorDetailModal({ doc, details, onClose, onApprove, onReject }) {
             </div>
             <div className="bg-[#fdf0f9] p-4 rounded-xl">
               <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Phone</p>
-              <p className="text-sm font-bold text-gray-800">{details?.phone || "N/A"}</p>
+              <p className="text-sm font-bold text-gray-800">{detail.phone || doc.phone || "N/A"}</p>
             </div>
             <div className="bg-[#fdf0f9] p-4 rounded-xl">
               <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Email</p>
-              <p className="text-sm font-bold text-gray-800 truncate">{details?.email || "N/A"}</p>
+              <p className="text-sm font-bold text-gray-800 truncate">{detail.email || doc.email || "N/A"}</p>
             </div>
           </div>
 
           <div className="bg-[#fdf0f9] p-4 rounded-xl">
             <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Hospital / Clinic</p>
-            <p className="text-sm font-bold text-gray-800">{details?.hospital || "N/A"}</p>
+            <p className="text-sm font-bold text-gray-800">{detail.hospital || doc.hospital || "N/A"}</p>
           </div>
 
           <div className="bg-[#fdf0f9] p-4 rounded-xl">
             <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Bio</p>
-            <p className="text-sm text-gray-600 leading-relaxed">{details?.bio || "No bio provided."}</p>
+            <p className="text-sm text-gray-600 leading-relaxed">{detail.bio || doc.bio || "No bio provided."}</p>
           </div>
 
           {/* Reject reason form */}
@@ -209,28 +210,39 @@ export default function AdminDoctors() {
   };
 
   const handleApprove = (doc) => {
-    setDoctors(prev => prev.map(d => d.id === doc.id ? { ...d, status: "approved" } : d));
-    setSelectedDoc(null);
-    showToast(`${doc.name} has been approved.`, "success");
+    approveDoctor(doc.id).then(({ error }) => {
+      if (error) return showToast(error, "error");
+      setDoctors(prev => prev.map(d => d.id === doc.id ? { ...d, status: "approved" } : d));
+      setSelectedDoc(null);
+      showToast(`${doc.name} has been approved.`, "success");
+    });
   };
 
   const handleReject = (doc, _reason) => {
-    // _reason would be sent to the backend API to email the doctor with the rejection reason
-    setDoctors(prev => prev.filter(d => d.id !== doc.id));
-    setSelectedDoc(null);
-    showToast(`${doc.name}'s application was rejected.`, "error");
+    rejectDoctor(doc.id, _reason).then(({ error }) => {
+      if (error) return showToast(error, "error");
+      setDoctors(prev => prev.filter(d => d.id !== doc.id));
+      setSelectedDoc(null);
+      showToast(`${doc.name}'s application was rejected.`, "error");
+    });
   };
 
   const handleSuspend = (doc) => {
-    setDoctors(prev => prev.map(d => d.id === doc.id ? { ...d, status: "suspended" } : d));
-    setConfirmModal(null);
-    showToast(`${doc.name} has been suspended.`, "error");
+    suspendDoctor(doc.id).then(({ error }) => {
+      if (error) return showToast(error, "error");
+      setDoctors(prev => prev.map(d => d.id === doc.id ? { ...d, status: "suspended" } : d));
+      setConfirmModal(null);
+      showToast(`${doc.name} has been suspended.`, "error");
+    });
   };
 
   const handleReinstate = (doc) => {
-    setDoctors(prev => prev.map(d => d.id === doc.id ? { ...d, status: "approved" } : d));
-    setConfirmModal(null);
-    showToast(`${doc.name} has been reinstated.`, "success");
+    reinstateDoctor(doc.id).then(({ error }) => {
+      if (error) return showToast(error, "error");
+      setDoctors(prev => prev.map(d => d.id === doc.id ? { ...d, status: "approved" } : d));
+      setConfirmModal(null);
+      showToast(`${doc.name} has been reinstated.`, "success");
+    });
   };
 
   return (
@@ -294,7 +306,7 @@ export default function AdminDoctors() {
           <p className="text-3xl font-black text-gray-800">{doctors.length}</p>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-1">Total Doctors</p>
         </div>
-        <div className="bg-gradient-to-br from-[#7B2D8B] to-[#600f72] p-6 rounded-2xl text-white shadow-lg">
+        <div className="bg-linear-to-br from-[#7B2D8B] to-[#600f72] p-6 rounded-2xl text-white shadow-lg">
           <span className="material-symbols-outlined mb-3 block opacity-70">pending_actions</span>
           <p className="text-3xl font-black">{doctors.filter(d => d.status === "pending").length}</p>
           <p className="text-xs font-semibold opacity-70 uppercase tracking-wider mt-1">Pending Approval</p>

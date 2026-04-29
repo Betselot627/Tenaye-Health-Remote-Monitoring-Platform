@@ -172,6 +172,16 @@ export default function Register() {
               Sign in
             </Link>
           </p>
+          <p className="text-center text-sm text-gray-400 mt-3">
+            Are you a doctor?{" "}
+            <Link
+              to="/doctor-apply"
+              className="text-[#632a7e] font-semibold hover:underline"
+            >
+              Apply here
+            </Link>
+          </p>
+        
         </div>
       </div>
     </div>

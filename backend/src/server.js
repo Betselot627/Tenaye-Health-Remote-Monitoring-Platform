@@ -13,6 +13,7 @@ import trackerRoutes from "./routes/trackerRoutes.js";
 import blogRoutes from "./routes/blogRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import callRoutes from "./routes/callRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
 
 // Connect MongoDB
 connectDB();
@@ -38,6 +39,7 @@ app.use("/api/trackers", trackerRoutes);
 app.use("/api/blogs", blogRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/call", callRoutes);
+app.use("/api/admin", adminRoutes);
 
 app.get("/health", (_, res) => res.json({ status: "ok", db: "mongodb" }));
 

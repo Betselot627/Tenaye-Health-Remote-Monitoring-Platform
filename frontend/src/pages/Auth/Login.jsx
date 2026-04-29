@@ -125,12 +125,12 @@ export default function Login() {
           </form>
 
           <p className="text-center text-sm text-gray-400 mt-6">
-            Don't have an account?{" "}
+            Need a doctor account?{" "}
             <Link
-              to="/register"
+              to="/doctor-apply"
               className="text-[#632a7e] font-semibold hover:underline"
             >
-              Create one
+              Apply here
             </Link>
           </p>
         </div>
