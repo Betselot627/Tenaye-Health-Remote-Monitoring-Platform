@@ -82,6 +82,15 @@ export default function DoctorLayout({ children, title }) {
   const [showProfile, setShowProfile] = useState(false);
   const [profile, setProfile] = useState(getDoctorProfile());
 
+  // Logout handler
+  const handleLogout = () => {
+    // Remove auth tokens (customize as needed)
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    // Redirect to login
+    navigate("/auth/login");
+  };
+
   useEffect(() => {
     const u = subscribeDoctorProfile(setProfile);
     return u;
@@ -394,6 +403,13 @@ export default function DoctorLayout({ children, title }) {
                 </div>
               )}
             </div>
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 rounded-xl bg-red-50 text-red-600 font-bold text-xs border border-red-100 hover:bg-red-100 transition-all mr-1"
+              title="Logout"
+            >
+              Logout
+            </button>
             <button
               onClick={() => setShowProfile(true)}
               className="w-9 h-9 rounded-full flex items-center justify-center text-[#083d40] font-black text-sm shadow-md hover:scale-110 transition-transform"
