@@ -345,23 +345,64 @@ export const createBlog = async (blogData) => {
 
 // ─── PAYMENTS ─────────────────────────────────────────────────────────────────
 
-/**
- * BACKEND:
- * const { data } = await supabase.from("payments")
- *   .select("*, patient:profiles!patient_id(full_name), doctor:doctors(profiles(full_name))")
- *   .order("created_at", { ascending: false })
- */
 export const getAllPayments = async () => {
-  return { data: mockPayments, error: null };
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${API_BASE_URL}/api/admin/payments`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) {
+      throw new Error(await readResponseError(response));
+    }
+
+    const data = await response.json();
+    return { data, error: null };
+  } catch (err) {
+    return { data: null, error: err.message };
+  }
 };
 
-/**
- * BACKEND:
- * // Call Chapa or TeleBirr refund API via Express backend
- * await fetch("/api/payment/refund", { method: "POST", body: JSON.stringify({ transactionId }) })
- * // Then update local record
- * await supabase.from("payments").update({ status: "refunded", refunded_at: new Date() }).eq("id", paymentId)
- */
+export const approvePayment = async (paymentId) => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${API_BASE_URL}/api/admin/payments/${paymentId}/approve`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) {
+      throw new Error(await readResponseError(response));
+    }
+
+    return { error: null };
+  } catch (err) {
+    return { error: err.message };
+  }
+};
+
+export const rejectPayment = async (paymentId, reason) => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${API_BASE_URL}/api/admin/payments/${paymentId}/reject`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ reason }),
+    });
+
+    if (!response.ok) {
+      throw new Error(await readResponseError(response));
+    }
+
+    return { error: null };
+  } catch (err) {
+    return { error: err.message };
+  }
+};
+
 export const processRefund = async (paymentId) => {
   return { error: null };
 };

@@ -1,9 +1,16 @@
+import { setDefaultResultOrder, setServers } from 'dns';
+setDefaultResultOrder('ipv4first');
+setServers(['8.8.8.8', '1.1.1.1']);
+
 import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import cors from "cors";
 import "dotenv/config";
 import connectDB from "./config/db.js";
+import path from "path";
+import { fileURLToPath } from "url";
+import fs from "fs";
 
 // Routes
 import authRoutes from "./routes/authRoutes.js";
@@ -18,6 +25,16 @@ import adminRoutes from "./routes/adminRoutes.js";
 // Connect MongoDB
 connectDB();
 
+// ES Module __dirname equivalent
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, '../uploads/receipts');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
 const app = express();
 const httpServer = createServer(app);
 
@@ -30,6 +47,9 @@ const io = new Server(httpServer, {
 
 app.use(cors({ origin: process.env.CORS_ORIGIN || "http://localhost:5173" }));
 app.use(express.json());
+
+// Serve static files for uploads
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // API Routes
 app.use("/api/auth", authRoutes);
