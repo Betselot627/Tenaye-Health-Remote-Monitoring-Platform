@@ -22,10 +22,19 @@ const statusIcons = {
   cancelled: "cancel",
 };
 
-function AppointmentDetailModal({ apt, onClose }) {
+function AppointmentDetailModal({ apt, onClose, onJoinCall }) {
   const scheduledDate = new Date(apt.scheduled_at);
   const dateStr = scheduledDate.toLocaleDateString();
   const timeStr = scheduledDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  // Check if within allowed call window (15 min before to 30 min after scheduled time)
+  const now = new Date();
+  const callWindowStart = new Date(scheduledDate.getTime() - 15 * 60 * 1000); // 15 min before
+  const callWindowEnd = new Date(scheduledDate.getTime() + 30 * 60 * 1000); // 30 min after
+  const canJoinCall = now >= callWindowStart && now <= callWindowEnd;
+  const timeUntilCall = callWindowStart - now;
+  const isTooEarly = now < callWindowStart;
+  const isTooLate = now > callWindowEnd;
   
   return (
     <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
@@ -103,11 +112,23 @@ function AppointmentDetailModal({ apt, onClose }) {
         </div>
         <div className="px-6 pb-6 flex gap-3">
           {apt.status === "upcoming" && apt.payment?.status === 'paid' && (
-            <button className="flex-1 py-2.5 bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white text-sm font-bold rounded-xl hover:scale-105 transition-all shadow-lg shadow-rose-200 flex items-center justify-center gap-2">
+            <button
+              onClick={() => canJoinCall && onJoinCall(apt)}
+              disabled={!canJoinCall}
+              className={`flex-1 py-2.5 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-rose-200 flex items-center justify-center gap-2 ${
+                canJoinCall
+                  ? 'bg-gradient-to-r from-[#E05C8A] to-[#F4845F] hover:scale-105'
+                  : 'bg-gray-400 cursor-not-allowed'
+              }`}
+            >
               <span className="material-symbols-outlined text-sm">
-                videocam
+                {canJoinCall ? 'videocam' : isTooEarly ? 'schedule' : 'event_busy'}
               </span>
-              Join Video Call
+              {canJoinCall
+                ? 'Join Video Call'
+                : isTooEarly
+                ? `Available at ${callWindowStart.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`
+                : 'Call Window Expired'}
             </button>
           )}
           <button
@@ -146,6 +167,52 @@ export default function PatientAppointments() {
     filter === "all"
       ? appointments
       : appointments.filter((a) => a.status === filter);
+
+  // Handle joining video call - only allowed at scheduled time with verified payment
+  const handleJoinCall = async (apt) => {
+    try {
+      const token = localStorage.getItem("token");
+
+      // Verify payment and appointment eligibility via backend
+      const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+      const res = await fetch(
+        `${API_BASE_URL}/api/appointments/${apt._id}/verify-call`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: "Call verification failed" }));
+        alert(errorData.message || "Unable to join call at this time. Please check your appointment time.");
+        return;
+      }
+
+      const data = await res.json();
+
+      if (data.eligible) {
+        // Navigate to video call with appointment data
+        navigate(`/consultation/${apt.video_room_id || apt._id}`, {
+          state: {
+            role: "patient",
+            appointmentId: apt._id,
+            doctorName: apt.doctor?.user?.full_name || "Doctor",
+            patientName: "Patient",
+            scheduledAt: apt.scheduled_at,
+          },
+        });
+      } else {
+        alert(data.message || "Call is not available at this time.");
+      }
+    } catch (error) {
+      console.error("Join call error:", error);
+      alert("Failed to join call. Please try again.");
+    }
+  };
 
   if (loading) {
     return (
@@ -293,6 +360,7 @@ export default function PatientAppointments() {
         <AppointmentDetailModal
           apt={selected}
           onClose={() => setSelected(null)}
+          onJoinCall={handleJoinCall}
         />
       )}
     </PatientLayout>

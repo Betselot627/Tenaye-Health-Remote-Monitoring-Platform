@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import PatientLayout from "./components/PatientLayout";
-import { getDoctors, createAppointment, initiatePayment, uploadReceipt, verifyChapaPayment } from "../../services/patientService";
+import { getDoctors, getDoctorById, createAppointment, initiatePayment, uploadReceipt, verifyChapaPayment, getDoctorBookedSlots } from "../../services/patientService";
 
 const specialties = [
   "All",
@@ -17,7 +17,7 @@ const statusColors = {
   busy: "bg-amber-100 text-amber-700",
 };
 
-function DoctorModal({ doctor, onClose, onBookingSuccess }) {
+function DoctorModal({ doctor: initialDoctor, onClose, onBookingSuccess }) {
   const [showBooking, setShowBooking] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
@@ -29,21 +29,92 @@ function DoctorModal({ doctor, onClose, onBookingSuccess }) {
   const [error, setError] = useState("");
   const [payment, setPayment] = useState(null);
   const [appointment, setAppointment] = useState(null);
+  const [doctor, setDoctor] = useState(initialDoctor);
+  const [availableSlots, setAvailableSlots] = useState([]);
 
-  const times = [
-    "09:00 AM",
-    "10:00 AM",
-    "11:00 AM",
-    "02:00 PM",
-    "03:00 PM",
-    "04:00 PM",
-  ];
+  // Fetch full doctor details including availability when modal opens
+  useEffect(() => {
+    const fetchDoctorDetails = async () => {
+      const doctorId = initialDoctor._id || initialDoctor.id;
+      if (doctorId) {
+        const result = await getDoctorById(doctorId);
+        if (result.data) {
+          setDoctor(result.data);
+        }
+      }
+    };
+    fetchDoctorDetails();
+  }, [initialDoctor]);
+
+  // Get available time slots based on selected date and doctor's availability
+  // Also checks for already booked slots to prevent double-booking
+  // Includes real-time polling every 5 seconds and refresh on window focus
+  useEffect(() => {
+    let intervalId;
+
+    const fetchAvailableSlots = async () => {
+      // Must have both date and availability data
+      if (!selectedDate || !doctor.availability || doctor.availability.length === 0) {
+        setAvailableSlots([]);
+        return;
+      }
+
+      // Parse date manually to avoid timezone issues
+      const [year, month, day] = selectedDate.split('-').map(Number);
+      const date = new Date(year, month - 1, day); // month is 0-indexed
+      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const dayName = dayNames[date.getDay()];
+
+      // Find availability for the selected day
+      const dayAvailability = doctor.availability.find(a => a.day === dayName);
+
+      if (!dayAvailability || !dayAvailability.slots || dayAvailability.slots.length === 0) {
+        setAvailableSlots([]);
+        setSelectedTime("");
+        return;
+      }
+
+      // Get already booked slots for this doctor on this date
+      const doctorId = doctor._id || doctor.id;
+      try {
+        const bookedResult = await getDoctorBookedSlots(doctorId, selectedDate);
+        const bookedSlots = bookedResult.data?.bookedSlots || [];
+
+        // Filter out already booked slots
+        const available = dayAvailability.slots.filter(slot => !bookedSlots.includes(slot));
+        setAvailableSlots(prev => {
+          // If currently selected time is now booked, deselect it
+          if (selectedTime && bookedSlots.includes(selectedTime)) {
+            setSelectedTime("");
+          }
+          return available;
+        });
+      } catch (err) {
+        // If booked slots API fails, show all available slots from doctor's schedule
+        setAvailableSlots(dayAvailability.slots);
+      }
+    };
+
+    // Initial fetch
+    fetchAvailableSlots();
+
+    // Set up polling every 5 seconds for real-time updates
+    intervalId = setInterval(fetchAvailableSlots, 5000);
+
+    // Refresh when window regains focus (user returns to tab)
+    const handleFocus = () => {
+      fetchAvailableSlots();
+    };
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [selectedDate, doctor.availability, doctor._id, doctor.id, selectedTime]);
 
   const handleBook = async () => {
-    console.log('handleBook called:', { selectedDate, selectedTime, paymentMethod, doctor });
-    
     if (!selectedDate || !selectedTime) {
-      console.log('Missing date or time');
       return;
     }
     
@@ -66,14 +137,19 @@ function DoctorModal({ doctor, onClose, onBookingSuccess }) {
         } else if (period === 'AM' && hours === 12) {
           hours = 0;
         }
-        return `${hours.toString().padStart(2, '0')}:${minutes}`;
+        return { hours, minutes: parseInt(minutes, 10) };
       };
       
-      const time24 = convertTo24Hour(selectedTime);
-      const scheduledAt = new Date(`${selectedDate}T${time24}`);
+      const { hours, minutes } = convertTo24Hour(selectedTime);
+      const [year, month, day] = selectedDate.split('-').map(Number);
+      
+      // Create date in local timezone (preserves the selected time)
+      const scheduledAt = new Date(year, month - 1, day, hours, minutes);
+      
       console.log('Creating appointment:', {
         doctor: doctor._id || doctor.id,
         scheduled_at: scheduledAt.toISOString(),
+        localTime: selectedTime,
       });
       
       const apptResult = await createAppointment({
@@ -81,25 +157,32 @@ function DoctorModal({ doctor, onClose, onBookingSuccess }) {
         scheduled_at: scheduledAt.toISOString(),
       });
       
-      console.log('Appointment result:', apptResult);
-      
+      // Handle conflict - slot already booked
       if (apptResult.error) {
-        console.error('Appointment creation error:', apptResult.error);
-        setError(apptResult.error);
-        setLoading(false);
-        return;
+        if (apptResult.error.includes("already been booked") || apptResult.error.includes("409")) {
+          setError("This time slot was just booked by another patient. Please select a different time.");
+          // Refresh available slots immediately
+          const bookedResult = await getDoctorBookedSlots(doctor._id || doctor.id, selectedDate);
+          const bookedSlots = bookedResult.data?.bookedSlots || [];
+          const [y, m, d] = selectedDate.split('-').map(Number);
+          const date = new Date(y, m - 1, d);
+          const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+          const dayName = dayNames[date.getDay()];
+          const dayAvailability = doctor.availability.find(a => a.day === dayName);
+          if (dayAvailability && dayAvailability.slots) {
+            const available = dayAvailability.slots.filter(slot => !bookedSlots.includes(slot));
+            setAvailableSlots(available);
+            setSelectedTime("");
+          }
+          setLoading(false);
+          return;
+        }
+        throw new Error(apptResult.error);
       }
       
       setAppointment(apptResult.data);
       
       // Initiate payment
-      console.log('Initiating payment:', {
-        doctor: doctor._id || doctor.id,
-        appointment: apptResult.data._id,
-        amount: doctor.consultation_fee || doctor.fee,
-        gateway: paymentMethod,
-      });
-      
       const paymentResult = await initiatePayment({
         doctor: doctor._id || doctor.id,
         appointment: apptResult.data._id,
@@ -107,22 +190,17 @@ function DoctorModal({ doctor, onClose, onBookingSuccess }) {
         gateway: paymentMethod,
       });
       
-      console.log('Payment result:', paymentResult);
-      
       if (paymentResult.error) {
-        console.error('Payment initiation error:', paymentResult.error);
         setError(paymentResult.error);
         setLoading(false);
         return;
       }
       
-      console.log('Payment result data:', paymentResult.data);
       setPayment(paymentResult.data.payment);
       
       // If Chapa, redirect to payment page
       if (paymentMethod === 'chapa') {
         const chapaUrl = paymentResult.data.checkout_url;
-        console.log('Chapa URL:', chapaUrl);
         
         if (!chapaUrl) {
           setError('Failed to get Chapa checkout URL');
@@ -380,17 +458,32 @@ function DoctorModal({ doctor, onClose, onBookingSuccess }) {
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">
                   Time Slot
                 </label>
-                <div className="grid grid-cols-3 gap-2 mt-1">
-                  {times.map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setSelectedTime(t)}
-                      className={`py-2 text-xs font-bold rounded-xl border transition-all ${selectedTime === t ? "bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white border-transparent shadow-lg" : "border-gray-200 text-gray-600 hover:border-rose-300 hover:text-[#E05C8A]"}`}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
+                {!selectedDate ? (
+                  <p className="text-sm text-gray-400 mt-2">Please select a date first</p>
+                ) : availableSlots.length === 0 ? (
+                  <p className="text-sm text-amber-600 mt-2">
+                    {(() => {
+                      const [y, m, d] = selectedDate.split('-').map(Number);
+                      const dt = new Date(y, m - 1, d);
+                      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                      return doctor.availability?.find(a => a.day === days[dt.getDay()])?.slots?.length > 0;
+                    })()
+                      ? "All slots are already booked for this day"
+                      : "No available slots for this day"}
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2 mt-1">
+                    {availableSlots.map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => setSelectedTime(t)}
+                        className={`py-2 text-xs font-bold rounded-xl border transition-all ${selectedTime === t ? "bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white border-transparent shadow-lg" : "border-gray-200 text-gray-600 hover:border-rose-300 hover:text-[#E05C8A]"}`}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="p-3 bg-amber-50 rounded-xl border border-amber-100 text-xs text-amber-700">
                 <span className="font-bold">Fee: {doctor.consultation_fee || doctor.fee} ETB</span>

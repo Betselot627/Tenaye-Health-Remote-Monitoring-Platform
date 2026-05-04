@@ -1,6 +1,52 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { mockPatientNotifications } from "../data/mockData";
+
+// Toast component for real-time notifications
+function Toast({ message, type = "info", onClose, action, actionLabel }) {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 5000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const colors = {
+    info: "bg-blue-600",
+    success: "bg-emerald-600",
+    warning: "bg-amber-500",
+    error: "bg-red-600",
+    call: "bg-[#E05C8A]",
+  };
+
+  const icons = {
+    info: "info",
+    success: "check_circle",
+    warning: "warning",
+    error: "error",
+    call: "videocam",
+  };
+
+  return (
+    <div className={`fixed top-20 right-4 z-[100] max-w-sm animate-slide-in`}>
+      <div className={`${colors[type]} text-white rounded-2xl shadow-2xl p-4 flex items-start gap-3`}>
+        <span className="material-symbols-outlined text-2xl shrink-0">{icons[type]}</span>
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-sm">{message}</p>
+          {action && (
+            <button
+              onClick={action}
+              className="mt-2 px-4 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-bold transition-colors"
+            >
+              {actionLabel || "View"}
+            </button>
+          )}
+        </div>
+        <button onClick={onClose} className="opacity-70 hover:opacity-100">
+          <span className="material-symbols-outlined">close</span>
+        </button>
+      </div>
+    </div>
+  );
+}
 
 const navItems = [
   { path: "/patient", label: "Dashboard", icon: "grid_view" },
@@ -27,18 +73,21 @@ const nIcon = {
   lab: "biotech",
   prescription: "medication",
   payment: "payments",
+  call: "videocam",
 };
 const nColor = {
   appointment: "bg-rose-100 text-rose-600",
   lab: "bg-emerald-100 text-emerald-600",
   prescription: "bg-amber-100 text-amber-600",
   payment: "bg-pink-100 text-pink-600",
+  call: "bg-red-100 text-red-600",
 };
 const nRoute = {
   appointment: "/patient/appointments",
   lab: "/patient/lab-results",
   prescription: "/patient/prescriptions",
   payment: "/patient/billing",
+  call: "/patient/appointments",
 };
 
 export default function PatientLayout({ children, title }) {
@@ -47,6 +96,8 @@ export default function PatientLayout({ children, title }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
   const [notifs, setNotifs] = useState(mockPatientNotifications);
+  const [toast, setToast] = useState(null);
+  const socketRef = useRef(null);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -70,8 +121,47 @@ export default function PatientLayout({ children, title }) {
     setShowNotifs(false);
   };
 
+  // Initialize Socket.io connection for real-time notifications
+  useEffect(() => {
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || "http://localhost:3001";
+    socketRef.current = window.io(socketUrl);
+    const userId = localStorage.getItem("userId");
+
+    if (userId) {
+      // Only notify when doctor joins/starts a scheduled call
+      socketRef.current.on(`call-started-${userId}`, (data) => {
+        setToast({
+          message: `Dr. ${data.doctorName} has joined your video call`,
+          type: "call",
+          action: () => {
+            navigate(`/consultation/${data.appointmentId}`);
+            setToast(null);
+          },
+          actionLabel: "Join Now",
+        });
+      });
+    }
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+    };
+  }, [navigate]);
+
   return (
     <div className="flex min-h-screen bg-[#fff5f7]">
+      {/* Real-time toast notifications */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          action={toast.action}
+          actionLabel={toast.actionLabel}
+          onClose={() => setToast(null)}
+        />
+      )}
+
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/40 z-40 lg:hidden"

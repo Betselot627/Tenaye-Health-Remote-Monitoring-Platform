@@ -9,8 +9,10 @@ import {
   uploadReceipt,
   verifyChapaPayment,
   handleChapaWebhook,
+  verifySOSPayment,
+  getDoctorEarnings,
 } from "../controllers/paymentController.js";
-import { protect } from "../middleware/authMiddleware.js";
+import { protect, requireRole } from "../middleware/authMiddleware.js";
 
 // ES Module __dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
@@ -71,9 +73,13 @@ const handleUpload = (req, res, next) => {
 
 const router = Router();
 router.get("/", protect, getPayments);
+router.get("/doctor/earnings", protect, requireRole("doctor"), getDoctorEarnings);
 router.post("/init", protect, initiatePayment);
 router.post("/upload-receipt", protect, handleUpload, uploadReceipt);
 router.get("/verify-chapa/:tx_ref", protect, verifyChapaPayment);
+
+// SOS Emergency payment verification
+router.post("/verify-sos", protect, verifySOSPayment);
 
 // Public webhook endpoint (called by Chapa servers)
 router.post("/webhook/chapa", handleChapaWebhook);

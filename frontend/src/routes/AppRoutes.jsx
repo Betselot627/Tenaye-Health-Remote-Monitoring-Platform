@@ -8,6 +8,7 @@ import Register from "../pages/Auth/Register";
 import ForgotPassword from "../pages/Auth/ForgotPassword";
 import ResetPassword from "../pages/Auth/ResetPassword";
 import VideoCall from "../pages/Consultation/VideoCall";
+import StreamVideoCall from "../pages/Consultation/StreamVideoCall";
 import DoctorApply from "../pages/Auth/DoctorApply";
 
 // ─── ADMIN ────────────────────────────────────────────────────────────────────
@@ -31,7 +32,6 @@ import DoctorLabOrders from "../pages/Doctor/LabOrders";
 import DoctorVitals from "../pages/Doctor/Vitals";
 import DoctorBlogs from "../pages/Doctor/Blogs";
 import DoctorEarnings from "../pages/Doctor/Earnings";
-import DoctorSchedule from "../pages/Doctor/Schedule";
 import DoctorSettings from "../pages/Doctor/Settings";
 
 // ─── PATIENT ──────────────────────────────────────────────────────────────────
@@ -232,14 +232,6 @@ export default function AppRoutes() {
         }
       />
       <Route
-        path="/doctor/schedule"
-        element={
-          <P allowedRoles={["doctor"]}>
-            <DoctorSchedule />
-          </P>
-        }
-      />
-      <Route
         path="/doctor/settings"
         element={
           <P allowedRoles={["doctor"]}>
@@ -323,7 +315,7 @@ export default function AppRoutes() {
       />
       <Route path="/payment/success" element={<PaymentSuccess />} />
       <Route path="/payment/failed" element={<PaymentFailed />} />
-      <Route path="/consultation/:roomId" element={<P><VideoCall /></P>} />
+      <Route path="/consultation/:roomId" element={<P><StreamVideoCall /></P>} />
 
       {/* ── 404 ── */}
       <Route path="*" element={<Navigate to="/home" replace />} />

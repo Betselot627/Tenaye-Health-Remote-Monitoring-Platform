@@ -66,6 +66,14 @@ function AppointmentDetailModal({ apt, onClose, onStart }) {
   const scheduledDate = new Date(apt.scheduled_at);
   const dateStr = scheduledDate.toLocaleDateString();
   const timeStr = scheduledDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  // Check if within allowed call window (15 min before to 30 min after scheduled time)
+  const now = new Date();
+  const callWindowStart = new Date(scheduledDate.getTime() - 15 * 60 * 1000); // 15 min before
+  const callWindowEnd = new Date(scheduledDate.getTime() + 30 * 60 * 1000); // 30 min after
+  const canStartCall = now >= callWindowStart && now <= callWindowEnd;
+  const isTooEarly = now < callWindowStart;
+  const isTooLate = now > callWindowEnd;
   
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -140,10 +148,22 @@ function AppointmentDetailModal({ apt, onClose, onStart }) {
           </button>
           {apt.status === "upcoming" && apt.payment?.status === 'paid' && (
             <button
-              onClick={() => onStart(apt)}
-              className="flex-1 px-4 py-3 bg-gradient-to-r from-[#0D7377] to-[#14A085] text-white rounded-xl font-bold text-sm hover:shadow-lg transition-all"
+              onClick={() => canStartCall && onStart(apt)}
+              disabled={!canStartCall}
+              className={`flex-1 px-4 py-3 text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
+                canStartCall
+                  ? 'bg-gradient-to-r from-[#0D7377] to-[#14A085] hover:shadow-lg'
+                  : 'bg-gray-400 cursor-not-allowed'
+              }`}
             >
-              Start Consultation
+              <span className="material-symbols-outlined text-sm">
+                {canStartCall ? 'videocam' : isTooEarly ? 'schedule' : 'event_busy'}
+              </span>
+              {canStartCall
+                ? 'Start Consultation'
+                : isTooEarly
+                ? `Available at ${callWindowStart.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`
+                : 'Call Window Expired'}
             </button>
           )}
         </div>
@@ -203,9 +223,54 @@ export default function DoctorAppointments() {
     showToast(`Appointment ${apt._id?.slice(-8) || 'N/A'} has been cancelled.`, "error");
   };
 
-  const handleStart = (apt) => {
-    setDetailModal(null);
-    navigate(`/consultation/${apt._id}`);
+  const handleStart = async (apt) => {
+    try {
+      const token = localStorage.getItem("token");
+
+      // Verify appointment eligibility via backend
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/appointments/${apt._id}/verify-call`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: "Call verification failed" }));
+        showToast(errorData.message || "Unable to start consultation at this time.", "error");
+        return;
+      }
+
+      const data = await res.json();
+
+      if (data.eligible) {
+        // Notify patient that doctor has started the call
+        if (window.doctorStartCall && apt.patient?._id) {
+          window.doctorStartCall(apt._id, apt.patient._id, apt.patient?.full_name || "Patient");
+        }
+
+        setDetailModal(null);
+        navigate(`/consultation/${apt.video_room_id || apt._id}`, {
+          state: {
+            role: "doctor",
+            appointmentId: apt._id,
+            patientId: apt.patient?._id,
+            doctorName: "Doctor",
+            patientName: apt.patient?.full_name || "Patient",
+            scheduledAt: apt.scheduled_at,
+          },
+        });
+      } else {
+        showToast(data.message || "Consultation is not available at this time.", "error");
+      }
+    } catch (error) {
+      console.error("Start consultation error:", error);
+      showToast("Failed to start consultation. Please try again.", "error");
+    }
   };
 
   return (
@@ -366,10 +431,10 @@ export default function DoctorAppointments() {
                           visibility
                         </span>
                       </button>
-                      {apt.status === "upcoming" && (
+                      {apt.status === "upcoming" && apt.payment?.status === 'paid' && (
                         <>
                           <button
-                            onClick={() => navigate(`/consultation/${apt._id}`)}
+                            onClick={() => handleStart(apt)}
                             className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                             title="Start consultation"
                           >

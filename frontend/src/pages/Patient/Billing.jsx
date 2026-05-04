@@ -5,7 +5,6 @@ import { getPayments, uploadReceipt, verifyChapaPayment } from "../../services/p
 const statusColors = {
   paid: "bg-emerald-100 text-emerald-700",
   pending: "bg-amber-100 text-amber-700",
-  refunded: "bg-blue-100 text-blue-700",
   awaiting_verification: "bg-purple-100 text-purple-700",
   failed: "bg-red-100 text-red-700",
 };
@@ -156,6 +155,58 @@ export default function PatientBilling() {
           </p>
         </div>
 
+        {/* Payment Account Information */}
+        <div className="bg-gradient-to-r from-[#fff5f7] to-rose-50 rounded-2xl p-5 border border-rose-100">
+          <h3 className="font-bold text-[#E05C8A] flex items-center gap-2 mb-4">
+            <span className="material-symbols-outlined">account_balance</span>
+            Payment Account Information
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* CBE */}
+            <div className="bg-white rounded-xl p-4 border border-gray-100">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-blue-600 text-sm">account_balance</span>
+                </div>
+                <span className="font-bold text-sm text-gray-800">CBE</span>
+              </div>
+              <p className="text-xs text-gray-500 mb-1">Commercial Bank of Ethiopia</p>
+              <p className="text-sm font-bold text-gray-900">1000123456789</p>
+              <p className="text-xs text-gray-400 mt-1">Account Name: Tenaye Health</p>
+            </div>
+
+            {/* Telebirr */}
+            <div className="bg-white rounded-xl p-4 border border-gray-100">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-green-600 text-sm">smartphone</span>
+                </div>
+                <span className="font-bold text-sm text-gray-800">Telebirr</span>
+              </div>
+              <p className="text-xs text-gray-500 mb-1">Ethio Telecom</p>
+              <p className="text-sm font-bold text-gray-900">+251 911 234 567</p>
+              <p className="text-xs text-gray-400 mt-1">Account Name: Tenaye Health</p>
+            </div>
+
+            {/* Bank of Abyssinia */}
+            <div className="bg-white rounded-xl p-4 border border-gray-100">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-amber-600 text-sm">account_balance</span>
+                </div>
+                <span className="font-bold text-sm text-gray-800">Bank of Abyssinia</span>
+              </div>
+              <p className="text-xs text-gray-500 mb-1">Abyssinia Bank</p>
+              <p className="text-sm font-bold text-gray-900">00212345678901</p>
+              <p className="text-xs text-gray-400 mt-1">Account Name: Tenaye Health</p>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mt-4 flex items-center gap-1">
+            <span className="material-symbols-outlined text-sm text-amber-500">info</span>
+            Please transfer to one of these accounts and upload your receipt for verification.
+          </p>
+        </div>
+
         {/* Summary cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
@@ -207,7 +258,7 @@ export default function PatientBilling() {
 
         {/* Filter tabs */}
         <div className="flex gap-2 flex-wrap">
-          {["all", "paid", "pending", "refunded"].map((f) => (
+          {["all", "paid", "pending"].map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}

@@ -1,13 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import PatientLayout from "./components/PatientLayout";
-import {
-  mockPatientStats,
-  mockPatientAppointments,
-  mockPatientActivity,
-  mockVitals,
-  mockPatientPrescriptions,
-} from "./data/mockData";
+import { getMyAppointments, getPayments } from "../../services/patientService";
+
+// Stream Video and Chat SDKs (loaded via CDN)
+const StreamVideo = window?.StreamVideo?.StreamVideoClient;
+const StreamChat = window?.StreamChat?.StreamChat;
 
 const statusColors = {
   upcoming: "bg-rose-100 text-rose-700",
@@ -183,6 +181,7 @@ export default function PatientDashboard() {
   const [vitals, setVitals] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [userName, setUserName] = useState("Patient");
   const [counters, setCounters] = useState({
     appointments: 0,
     prescriptions: 0,
@@ -190,23 +189,377 @@ export default function PatientDashboard() {
     spent: 0,
   });
 
+  // Get user name from localStorage
   useEffect(() => {
-    setTimeout(() => {
-      setStats(mockPatientStats);
-      setAppointments(
-        mockPatientAppointments
-          .filter((a) => a.status === "upcoming")
-          .slice(0, 3),
+    const storedName = localStorage.getItem("userName");
+    if (storedName) {
+      setUserName(storedName);
+    }
+  }, []);
+
+  // SOS Emergency State
+  const [sosActive, setSosActive] = useState(false);
+  const [sosStatus, setSosStatus] = useState("");
+  const [inCall, setInCall] = useState(false);
+  const [callId, setCallId] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [paymentVerified, setPaymentVerified] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const videoContainerRef = useRef(null);
+  const chatContainerRef = useRef(null);
+  const socketRef = useRef(null);
+  const videoClientRef = useRef(null);
+  const chatClientRef = useRef(null);
+  const callRef = useRef(null);
+
+  // Initialize Socket.io connection
+  useEffect(() => {
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || "http://localhost:3001";
+    socketRef.current = window.io(socketUrl);
+
+    // Listen for SOS acceptance
+    const userId = localStorage.getItem("userId");
+    if (userId) {
+      socketRef.current.on(`sos-accepted-${userId}`, (data) => {
+        setSosStatus("Doctor has joined the call!");
+      });
+
+      socketRef.current.on(`sos-declined-${userId}`, () => {
+        setSosStatus("Doctor is unavailable. Please try again or contact emergency services.");
+        setTimeout(() => {
+          setSosActive(false);
+          setSosStatus("");
+        }, 5000);
+      });
+    }
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+    };
+  }, []);
+
+  // Verify payment before enabling video/chat
+  const verifyPayment = async () => {
+    try {
+      setPaymentLoading(true);
+      setSosStatus("Verifying payment...");
+
+      const token = localStorage.getItem("token");
+      const userId = localStorage.getItem("userId");
+
+      // Check if user has valid payment or subscription
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/payments/verify-sos`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ userId, serviceType: "sos_emergency" }),
+        }
       );
-      setActivity(mockPatientActivity);
-      setVitals(mockVitals.slice(0, 7));
-      setPrescriptions(
-        mockPatientPrescriptions
-          .filter((p) => p.status === "active")
-          .slice(0, 3),
-      );
-      setLoading(false);
-    }, 400);
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: "Payment verification failed" }));
+        throw new Error(errorData.message || "Payment verification failed");
+      }
+
+      const data = await res.json();
+
+      if (data.verified) {
+        setPaymentVerified(true);
+        setSosStatus("Payment verified. Initializing emergency call...");
+        return true;
+      } else {
+        setSosStatus("Payment required. Please complete payment to access emergency services.");
+        return false;
+      }
+    } catch (error) {
+      console.error("Payment verification error:", error);
+      setSosStatus(`Payment error: ${error.message}. Please contact support.`);
+      return false;
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  // Handle SOS Emergency Button
+  const handleSOS = async () => {
+    try {
+      setSosActive(true);
+      setSosStatus("Connecting to emergency services...");
+
+      const token = localStorage.getItem("token");
+      const userId = localStorage.getItem("userId");
+      const userName = localStorage.getItem("userName") || "Patient";
+
+      if (!token || !userId) {
+        setSosStatus("Please log in to use emergency services.");
+        return;
+      }
+
+      // Step 1: Verify payment first
+      const isPaymentVerified = await verifyPayment();
+      if (!isPaymentVerified) {
+        return; // Stop here if payment not verified
+      }
+
+      // Step 2: Get Stream token (with error handling)
+      let streamTokenData;
+      try {
+        const streamTokenRes = await fetch(
+          `${import.meta.env.VITE_API_URL}/stream/token`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ userId }),
+          }
+        );
+
+        if (!streamTokenRes.ok) {
+          const errorText = await streamTokenRes.text();
+          throw new Error(`Stream token error: ${streamTokenRes.status} ${errorText}`);
+        }
+
+        streamTokenData = await streamTokenRes.json();
+      } catch (tokenError) {
+        console.error("Stream token error:", tokenError);
+        setSosStatus("Video service temporarily unavailable. Chat-only mode enabled.");
+        // Continue with chat-only mode
+      }
+
+      // Get assigned doctor (from most recent appointment or default)
+      const assignedDoctorId = localStorage.getItem("assignedDoctorId") || appointments[0]?.doctorId;
+
+      if (!assignedDoctorId) {
+        setSosStatus("No assigned doctor found. Please contact emergency services: 911");
+        return;
+      }
+
+      // Step 3: Create Stream call
+      let callData;
+      try {
+        const callRes = await fetch(
+          `${import.meta.env.VITE_API_URL}/stream/create-call`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              patientId: userId,
+              doctorId: assignedDoctorId,
+            }),
+          }
+        );
+
+        if (!callRes.ok) {
+          const errorText = await callRes.text();
+          throw new Error(`Call creation error: ${callRes.status} ${errorText}`);
+        }
+
+        callData = await callRes.json();
+      } catch (callError) {
+        console.error("Call creation error:", callError);
+        setSosStatus("Failed to create emergency call. Please contact emergency services: 911");
+        return;
+      }
+
+      if (!callData?.callId) {
+        setSosStatus("Failed to create emergency call. Please contact emergency services: 911");
+        return;
+      }
+
+      setCallId(callData.callId);
+      setInCall(true);
+      setSosStatus("Emergency call initiated. Waiting for doctor...");
+
+      // Step 4: Initialize Stream Video (only after payment verified)
+      if (StreamVideo && streamTokenData?.apiKey && streamTokenData?.token) {
+        try {
+          const client = new StreamVideo(streamTokenData.apiKey, {
+            token: streamTokenData.token,
+            user: { id: userId, name: userName },
+          });
+          videoClientRef.current = client;
+
+          const call = client.call("default", callData.callId);
+          callRef.current = call;
+          await call.join({ create: false });
+
+          // Render video
+          if (videoContainerRef.current) {
+            call.camera.enable();
+            call.microphone.enable();
+          }
+        } catch (videoError) {
+          console.error("Video initialization error:", videoError);
+          setSosStatus("Video unavailable. Using chat-only mode.");
+        }
+      }
+
+      // Step 5: Initialize Stream Chat (only after payment verified)
+      if (StreamChat && streamTokenData?.apiKey && streamTokenData?.token) {
+        try {
+          const chatClient = StreamChat.getInstance(streamTokenData.apiKey);
+          await chatClient.connectUser(
+            { id: userId, name: userName },
+            streamTokenData.token
+          );
+          chatClientRef.current = chatClient;
+
+          const channel = chatClient.channel("messaging", callData.callId, {
+            name: `Emergency Call - ${callData.callId}`,
+          });
+          await channel.watch();
+
+          // Listen for messages
+          channel.on("message.new", (event) => {
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: event.message.id,
+                text: event.message.text,
+                user: event.message.user.name,
+                timestamp: new Date(event.message.created_at).toLocaleTimeString(),
+              },
+            ]);
+          });
+        } catch (chatError) {
+          console.error("Chat initialization error:", chatError);
+          setSosStatus("Chat unavailable. Please wait for doctor to call you.");
+        }
+      }
+
+      // Emit SOS alert via Socket.io
+      if (socketRef.current) {
+        socketRef.current.emit("sos-triggered", {
+          patientId: userId,
+          doctorId: assignedDoctorId,
+          patientName: userName,
+          callId: callData.callId,
+        });
+      }
+    } catch (error) {
+      console.error("SOS Error:", error);
+      setSosStatus(`Failed to connect: ${error.message}. Please call emergency services: 911`);
+    }
+  };
+
+  // End SOS Call
+  const endSOSCall = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      // End Stream call
+      if (callRef.current) {
+        await callRef.current.leave();
+      }
+
+      // Disconnect chat
+      if (chatClientRef.current) {
+        await chatClientRef.current.disconnectUser();
+      }
+
+      // Notify backend
+      if (callId) {
+        await fetch(`${import.meta.env.VITE_API_URL}/stream/end-call`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ callId }),
+        });
+
+        // Emit end event
+        socketRef.current.emit("sos-ended", {
+          callId,
+          patientId: localStorage.getItem("userId"),
+        });
+      }
+
+      setInCall(false);
+      setSosActive(false);
+      setSosStatus("");
+      setCallId(null);
+      setMessages([]);
+      setPaymentVerified(false);
+    } catch (error) {
+      console.error("End call error:", error);
+    }
+  };
+
+  // Send chat message
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !callId) return;
+
+    try {
+      const userId = localStorage.getItem("userId");
+      const channel = chatClientRef.current?.channel("messaging", callId);
+      if (channel) {
+        await channel.sendMessage({ text: newMessage });
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now(),
+            text: newMessage,
+            user: "You",
+            timestamp: new Date().toLocaleTimeString(),
+          },
+        ]);
+        setNewMessage("");
+      }
+    } catch (error) {
+      console.error("Send message error:", error);
+    }
+  };
+
+  // Fetch real data from APIs
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        // Fetch appointments
+        const appointmentsResult = await getMyAppointments();
+        const appointmentsData = appointmentsResult.data || [];
+
+        // Fetch payments for spending stats
+        const paymentsResult = await getPayments();
+        const paymentsData = paymentsResult.data || [];
+
+        // Calculate stats from real data
+        const upcomingAppointments = appointmentsData.filter(a => a.status === "upcoming").length;
+        const totalSpent = paymentsData
+          .filter(p => p.status === "paid")
+          .reduce((sum, p) => sum + (p.amount || 0), 0);
+
+        setStats({
+          upcomingAppointments,
+          activePrescriptions: 0, // Will be updated when prescriptions API is available
+          pendingLabResults: 0,   // Will be updated when lab results API is available
+          totalSpent,
+        });
+
+        setAppointments(appointmentsData.filter(a => a.status === "upcoming").slice(0, 3));
+        setActivity([]); // Activity feed will be populated when API is available
+        setVitals([]);   // Vitals will be populated when API is available
+        setPrescriptions([]); // Prescriptions will be populated when API is available
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
   }, []);
 
   useEffect(() => {
@@ -241,6 +594,7 @@ export default function PatientDashboard() {
 
   return (
     <PatientLayout title="Dashboard">
+
       <div className="space-y-6">
         {/* ── Welcome Banner ── */}
         <div
@@ -271,7 +625,7 @@ export default function PatientDashboard() {
                 </span>
               </div>
               <h2 className="text-2xl md:text-3xl font-black">
-                Welcome back, Bereket 👋
+                Welcome back, {userName} 👋
               </h2>
               <p className="text-white/70 mt-1.5 text-sm">
                 You have{" "}
@@ -324,7 +678,7 @@ export default function PatientDashboard() {
             icon="calendar_today"
             color="#E05C8A"
             bg="bg-rose-50"
-            trend="Next: Apr 30"
+            trend={counters.appointments > 0 ? `${counters.appointments} upcoming` : "No upcoming"}
           />
           <MetricTile
             label="Active Prescriptions"
@@ -332,8 +686,7 @@ export default function PatientDashboard() {
             icon="medication"
             color="#d97706"
             bg="bg-amber-50"
-            trend="1 expiring"
-            trendUp={false}
+            trend={counters.prescriptions > 0 ? `${counters.prescriptions} active` : "No active"}
           />
           <MetricTile
             label="Pending Lab Results"
@@ -341,8 +694,7 @@ export default function PatientDashboard() {
             icon="biotech"
             color="#7c3aed"
             bg="bg-violet-50"
-            trend="CBC pending"
-            trendUp={false}
+            trend={counters.labs > 0 ? `${counters.labs} pending` : "No pending"}
           />
           <MetricTile
             label="Total Spent (ETB)"
@@ -350,7 +702,7 @@ export default function PatientDashboard() {
             icon="payments"
             color="#059669"
             bg="bg-emerald-50"
-            trend="+500 this month"
+            trend={counters.spent > 0 ? "Payments up to date" : "No payments yet"}
           />
         </div>
 
@@ -368,44 +720,59 @@ export default function PatientDashboard() {
                     Vitals Overview
                   </h3>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    Heart rate & SpO₂ — last 7 readings
+                    {vitals.length > 0 ? "Heart rate & SpO₂ — last 7 readings" : "No vitals recorded yet"}
                   </p>
                 </div>
-                <div className="flex items-center gap-3 text-xs">
-                  <span className="flex items-center gap-1.5 text-[#E05C8A] font-bold">
-                    <span className="w-4 h-0.5 bg-[#E05C8A] inline-block rounded" />
-                    HR
+                {vitals.length > 0 && (
+                  <div className="flex items-center gap-3 text-xs">
+                    <span className="flex items-center gap-1.5 text-[#E05C8A] font-bold">
+                      <span className="w-4 h-0.5 bg-[#E05C8A] inline-block rounded" />
+                      HR
+                    </span>
+                    <span className="flex items-center gap-1.5 text-blue-500 font-bold">
+                      <span className="w-4 h-0.5 border-t-2 border-dashed border-blue-400 inline-block" />
+                      SpO₂
+                    </span>
+                  </div>
+                )}
+              </div>
+              {vitals.length > 0 ? (
+                <>
+                  <div className="h-28">
+                    <VitalsChart data={vitals} />
+                  </div>
+                  <div className="flex justify-between mt-1 text-[10px] font-bold text-gray-400 px-5">
+                    {vitals.map((v) => (
+                      <span key={v.date}>{v.date}</span>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="h-28 flex items-center justify-center text-gray-400">
+                  <div className="text-center">
+                    <span className="material-symbols-outlined text-3xl mb-2">monitor_heart</span>
+                    <p className="text-xs">Vitals data will appear here</p>
+                  </div>
+                </div>
+              )}
+              {vitals.length > 0 && (
+                <div className="flex justify-between mt-3 text-xs text-gray-400">
+                  <span>
+                    HR:{" "}
+                    <span className="font-bold text-[#E05C8A]">
+                      {Math.min(...vitals.map((v) => v.hr))}–
+                      {Math.max(...vitals.map((v) => v.hr))} BPM
+                    </span>
                   </span>
-                  <span className="flex items-center gap-1.5 text-blue-500 font-bold">
-                    <span className="w-4 h-0.5 border-t-2 border-dashed border-blue-400 inline-block" />
-                    SpO₂
+                  <span>
+                    SpO₂:{" "}
+                    <span className="font-bold text-blue-500">
+                      {Math.min(...vitals.map((v) => v.spo2))}–
+                      {Math.max(...vitals.map((v) => v.spo2))}%
+                    </span>
                   </span>
                 </div>
-              </div>
-              <div className="h-28">
-                <VitalsChart data={vitals} />
-              </div>
-              <div className="flex justify-between mt-1 text-[10px] font-bold text-gray-400 px-5">
-                {vitals.map((v) => (
-                  <span key={v.date}>{v.date}</span>
-                ))}
-              </div>
-              <div className="flex justify-between mt-3 text-xs text-gray-400">
-                <span>
-                  HR:{" "}
-                  <span className="font-bold text-[#E05C8A]">
-                    {Math.min(...vitals.map((v) => v.hr))}–
-                    {Math.max(...vitals.map((v) => v.hr))} BPM
-                  </span>
-                </span>
-                <span>
-                  SpO₂:{" "}
-                  <span className="font-bold text-blue-500">
-                    {Math.min(...vitals.map((v) => v.spo2))}–
-                    {Math.max(...vitals.map((v) => v.spo2))}%
-                  </span>
-                </span>
-              </div>
+              )}
             </div>
 
             {/* Vital rings */}
@@ -508,55 +875,60 @@ export default function PatientDashboard() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {appointments.map((apt) => (
-                    <div
-                      key={apt.id}
-                      className="flex items-center gap-4 p-3 rounded-xl border border-rose-100 hover:border-rose-300 hover:bg-rose-50/30 transition-all group"
-                    >
+                  {appointments.map((apt) => {
+                    const scheduledDate = new Date(apt.scheduled_at);
+                    const dateStr = scheduledDate.toLocaleDateString();
+                    const timeStr = scheduledDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    return (
                       <div
-                        className="w-12 h-12 rounded-xl flex flex-col items-center justify-center shrink-0 text-white"
-                        style={{
-                          background: "linear-gradient(135deg,#E05C8A,#F4845F)",
-                        }}
+                        key={apt._id}
+                        className="flex items-center gap-4 p-3 rounded-xl border border-rose-100 hover:border-rose-300 hover:bg-rose-50/30 transition-all group"
                       >
-                        <span className="text-sm font-black leading-none">
-                          {apt.date.split("-")[2]}
-                        </span>
-                        <span className="text-[10px] opacity-80">
-                          {new Date(apt.date).toLocaleString("en-US", {
-                            month: "short",
-                          })}
-                        </span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-gray-800">
-                          {apt.doctor}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          {apt.time} · {apt.specialty} · {apt.type}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span
-                          className={`text-xs font-semibold px-2.5 py-1 rounded-full ${statusColors[apt.status]}`}
-                        >
-                          {apt.status}
-                        </span>
-                        <button
-                          onClick={() => navigate("/patient/appointments")}
-                          className="p-1.5 rounded-lg text-white hover:opacity-90 transition-colors"
+                        <div
+                          className="w-12 h-12 rounded-xl flex flex-col items-center justify-center shrink-0 text-white"
                           style={{
-                            background:
-                              "linear-gradient(135deg,#E05C8A,#F4845F)",
+                            background: "linear-gradient(135deg,#E05C8A,#F4845F)",
                           }}
                         >
-                          <span className="material-symbols-outlined text-sm">
-                            arrow_forward
+                          <span className="text-sm font-black leading-none">
+                            {scheduledDate.getDate()}
                           </span>
-                        </button>
+                          <span className="text-[10px] opacity-80">
+                            {scheduledDate.toLocaleString("en-US", {
+                              month: "short",
+                            })}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-gray-800">
+                            {apt.doctor?.user?.full_name || "Doctor"}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {timeStr} · {apt.doctor?.specialty || "General"}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span
+                            className={`text-xs font-semibold px-2.5 py-1 rounded-full ${statusColors[apt.status]}`}
+                          >
+                            {apt.status}
+                          </span>
+                          <button
+                            onClick={() => navigate("/patient/appointments")}
+                            className="p-1.5 rounded-lg text-white hover:opacity-90 transition-colors"
+                            style={{
+                              background:
+                                "linear-gradient(135deg,#E05C8A,#F4845F)",
+                            }}
+                          >
+                            <span className="material-symbols-outlined text-sm">
+                              arrow_forward
+                            </span>
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
               <button

@@ -298,3 +298,106 @@ export const handleChapaWebhook = async (req, res) => {
   }
 };
 
+/**
+ * Verify SOS Emergency payment/subscription
+ * POST /api/payments/verify-sos
+ */
+export const verifySOSPayment = async (req, res) => {
+  try {
+    const { userId, serviceType } = req.body;
+
+    // Verify the requesting user matches the token
+    if (req.user._id.toString() !== userId) {
+      return res.status(403).json({ message: "Unauthorized access" });
+    }
+
+    // Check for active subscription or recent payment for SOS service
+    const recentPayment = await Payment.findOne({
+      patient: userId,
+      status: "paid",
+      createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }, // Within 30 days
+    });
+
+    // Also check for any successful appointment payments
+    const appointmentPayment = await Payment.findOne({
+      patient: userId,
+      status: "paid",
+      appointment: { $exists: true },
+    });
+
+    // For demo/development: auto-approve if user is authenticated
+    // In production, implement proper subscription/payment check
+    const isVerified = !!recentPayment || !!appointmentPayment || process.env.NODE_ENV === "development";
+
+    if (isVerified) {
+      res.json({
+        verified: true,
+        message: "Payment verified - Emergency services enabled",
+        serviceType: serviceType || "sos_emergency",
+      });
+    } else {
+      res.status(402).json({
+        verified: false,
+        message: "Payment required - Please complete a consultation payment to access emergency services",
+        serviceType: serviceType || "sos_emergency",
+      });
+    }
+  } catch (err) {
+    console.error("SOS payment verification error:", err);
+    res.status(500).json({
+      verified: false,
+      message: "Payment verification failed",
+      error: err.message,
+    });
+  }
+};
+
+// Get all payments/earnings for doctor's appointments
+export const getDoctorEarnings = async (req, res) => {
+  try {
+    const mongoose = await import("mongoose");
+    const doctor = await mongoose.model('Doctor').findOne({ user: req.user._id });
+    if (!doctor) {
+      return res.status(404).json({ message: 'Doctor profile not found' });
+    }
+
+    // Find all payments for appointments with this doctor
+    const payments = await Payment.find({ doctor: doctor._id })
+      .populate({
+        path: "appointment",
+        select: "scheduled_at status",
+      })
+      .populate({
+        path: "patient",
+        select: "full_name email",
+      })
+      .sort({ createdAt: -1 });
+
+    // Calculate stats
+    const totalPaid = payments
+      .filter(p => p.status === 'paid')
+      .reduce((sum, p) => sum + p.amount, 0);
+    
+    const totalPending = payments
+      .filter(p => p.status === 'awaiting_verification' || p.status === 'pending')
+      .reduce((sum, p) => sum + p.amount, 0);
+
+    const totalTransactions = payments.length;
+    const paidCount = payments.filter(p => p.status === 'paid').length;
+
+    res.json({
+      payments,
+      stats: {
+        totalPaid,
+        totalPending,
+        totalTransactions,
+        paidCount,
+        pendingCount: totalTransactions - paidCount,
+      },
+    });
+  } catch (err) {
+    console.error("Get doctor earnings error:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+

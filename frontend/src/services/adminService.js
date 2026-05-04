@@ -300,7 +300,17 @@ export const getCriticalAlerts = async () => {
  *   .order("created_at", { ascending: false })
  */
 export const getAllBlogs = async () => {
-  return { data: mockBlogs, error: null };
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/blogs`);
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || "Failed to fetch blogs");
+    }
+    const data = await response.json();
+    return { data, error: null };
+  } catch (error) {
+    return { data: null, error: error.message };
+  }
 };
 
 /**
@@ -327,7 +337,20 @@ export const rejectBlog = async (blogId, reason) => {
  * await supabase.from("blogs").delete().eq("id", blogId)
  */
 export const deleteBlog = async (blogId) => {
-  return { error: null };
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${API_BASE_URL}/api/blogs/${blogId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || "Failed to delete blog");
+    }
+    return { data: null, error: null };
+  } catch (error) {
+    return { data: null, error: error.message };
+  }
 };
 
 /**
@@ -339,8 +362,72 @@ export const deleteBlog = async (blogId) => {
  *   published_at: new Date()
  * })
  */
+export const toggleLikeBlog = async (blogId) => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${API_BASE_URL}/api/blogs/${blogId}/like`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || "Failed to like blog");
+    }
+    const data = await response.json();
+    return { data, error: null };
+  } catch (error) {
+    return { data: null, error: error.message };
+  }
+};
+
+export const updateBlog = async (blogId, blogData) => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${API_BASE_URL}/api/blogs/${blogId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(blogData),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || "Failed to update blog");
+    }
+
+    const data = await response.json();
+    return { data, error: null };
+  } catch (error) {
+    return { data: null, error: error.message };
+  }
+};
+
 export const createBlog = async (blogData) => {
-  return { error: null };
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${API_BASE_URL}/api/blogs`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(blogData),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || "Failed to create blog");
+    }
+
+    const data = await response.json();
+    return { data, error: null };
+  } catch (error) {
+    return { data: null, error: error.message };
+  }
 };
 
 // ─── PAYMENTS ─────────────────────────────────────────────────────────────────

@@ -133,6 +133,15 @@ export default function VideoCall() {
   const [ending, setEnding] = useState(false);
   const [remoteJoined, setRemoteJoined] = useState(false);
 
+  // Prescription modal state (doctor only)
+  const [showPrescription, setShowPrescription] = useState(false);
+  const [prescriptionData, setPrescriptionData] = useState({
+    diagnosis: "",
+    notes: "",
+    medications: [{ name: "", dosage: "", frequency: "", duration: "", instructions: "" }],
+  });
+  const [savingPrescription, setSavingPrescription] = useState(false);
+
   // ── Call timer ──
   useEffect(() => {
     if (!connected) return;
@@ -168,68 +177,112 @@ export default function VideoCall() {
     let cancelled = false;
 
     const init = async () => {
-      // 1. Get local media
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      localStreamRef.current = stream;
-      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
-
-      // 2. Connect socket
-      const socket = io(SOCKET_URL, { transports: ["websocket"] });
-      socketRef.current = socket;
-
-      // 3. Create peer connection
-      const pc = new RTCPeerConnection(STUN);
-      pcRef.current = pc;
-      stream.getTracks().forEach((t) => pc.addTrack(t, stream));
-
-      pc.ontrack = (e) => {
-        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = e.streams[0];
-      };
-
-      pc.onicecandidate = (e) => {
-        if (e.candidate) socket.emit("ice-candidate", { roomId, candidate: e.candidate });
-      };
-
-      pc.onconnectionstatechange = () => {
-        if (pc.connectionState === "connected") {
-          setConnected(true);
-          startRPPG();
+      try {
+        // 1. Get local media (video + audio)
+        console.log("[VideoCall] Requesting camera and microphone...");
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { width: 1280, height: 720 }, 
+          audio: { echoCancellation: true, noiseSuppression: true } 
+        });
+        console.log("[VideoCall] Got local stream:", stream.getTracks().map(t => `${t.kind}:${t.enabled}`));
+        localStreamRef.current = stream;
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+          console.log("[VideoCall] Local video attached");
         }
-      };
 
-      // 4. Socket events
-      socket.on("user-joined", async (peerId) => {
-        setRemoteJoined(true);
-        // Caller creates offer
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        socket.emit("offer", { roomId, offer });
-      });
+        // 2. Connect socket
+        console.log("[VideoCall] Connecting socket to:", SOCKET_URL);
+        const socket = io(SOCKET_URL, { transports: ["websocket"] });
+        socketRef.current = socket;
 
-      socket.on("offer", async ({ offer }) => {
-        await pc.setRemoteDescription(new RTCSessionDescription(offer));
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        socket.emit("answer", { roomId, answer });
-      });
+        socket.on("connect", () => {
+          console.log("[VideoCall] Socket connected:", socket.id);
+        });
 
-      socket.on("answer", async ({ answer }) => {
-        await pc.setRemoteDescription(new RTCSessionDescription(answer));
-      });
+        // 3. Create peer connection
+        const pc = new RTCPeerConnection(STUN);
+        pcRef.current = pc;
+        console.log("[VideoCall] Peer connection created");
 
-      socket.on("ice-candidate", async ({ candidate }) => {
-        try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (_) {}
-      });
+        stream.getTracks().forEach((t) => {
+          pc.addTrack(t, stream);
+          console.log("[VideoCall] Added track to peer connection:", t.kind);
+        });
 
-      socket.on("call-ended", () => {
-        if (!cancelled) endCall(false);
-      });
+        pc.ontrack = (e) => {
+          console.log("[VideoCall] Received remote track:", e.track.kind, e.streams);
+          if (remoteVideoRef.current) {
+            remoteVideoRef.current.srcObject = e.streams[0];
+            console.log("[VideoCall] Remote video attached");
+          }
+        };
 
-      // 5. Join room
-      socket.emit("join-room", roomId);
+        pc.onicecandidate = (e) => {
+          if (e.candidate) {
+            console.log("[VideoCall] Sending ICE candidate");
+            socket.emit("ice-candidate", { roomId, candidate: e.candidate });
+          }
+        };
+
+        pc.onconnectionstatechange = () => {
+          console.log("[VideoCall] Connection state:", pc.connectionState);
+          if (pc.connectionState === "connected") {
+            setConnected(true);
+            console.log("[VideoCall] WebRTC connected!");
+            startRPPG();
+          }
+        };
+
+        // 4. Socket events
+        socket.on("user-joined", async (peerId) => {
+          console.log("[VideoCall] User joined:", peerId);
+          setRemoteJoined(true);
+          // Caller creates offer
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          socket.emit("offer", { roomId, offer });
+          console.log("[VideoCall] Offer sent");
+        });
+
+        socket.on("offer", async ({ offer }) => {
+          console.log("[VideoCall] Offer received");
+          await pc.setRemoteDescription(new RTCSessionDescription(offer));
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          socket.emit("answer", { roomId, answer });
+          console.log("[VideoCall] Answer sent");
+        });
+
+        socket.on("answer", async ({ answer }) => {
+          console.log("[VideoCall] Answer received");
+          await pc.setRemoteDescription(new RTCSessionDescription(answer));
+        });
+
+        socket.on("ice-candidate", async ({ candidate }) => {
+          try { 
+            await pc.addIceCandidate(new RTCIceCandidate(candidate)); 
+            console.log("[VideoCall] ICE candidate added");
+          } catch (e) {
+            console.error("[VideoCall] ICE candidate error:", e);
+          }
+        });
+
+        socket.on("call-ended", () => {
+          console.log("[VideoCall] Call ended by peer");
+          if (!cancelled) endCall(false);
+        });
+
+        // 5. Join room
+        console.log("[VideoCall] Joining room:", roomId);
+        socket.emit("join-room", roomId);
+      } catch (err) {
+        console.error("[VideoCall] Init error:", err);
+        alert("Failed to access camera/microphone. Please check permissions.");
+      }
     };
 
-    init().catch(console.error);
+    init();
 
     return () => {
       cancelled = true;
@@ -247,12 +300,86 @@ export default function VideoCall() {
     if (emitEvent) socketRef.current?.emit("end-call", { roomId });
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     pcRef.current?.close();
+
+    // Doctor: show prescription modal before navigating
+    if (role === "doctor" && appointmentId) {
+      setShowPrescription(true);
+      setEnding(false);
+      return; // Don't navigate yet, wait for prescription
+    }
+
     socketRef.current?.disconnect();
 
-    // In production: call POST /api/call/end-room with appointmentId
-    const dest = role === "doctor" ? "/doctor/appointments" : "/patient/appointments";
+    // Patient navigates back immediately
+    const dest = "/patient/appointments";
     navigate(dest, { state: { callEnded: true, duration: callDuration } });
-  }, [roomId, role, callDuration, navigate]);
+  }, [roomId, role, callDuration, navigate, appointmentId]);
+
+  // ── Add medication field ──
+  const addMedication = () => {
+    setPrescriptionData(prev => ({
+      ...prev,
+      medications: [...prev.medications, { name: "", dosage: "", frequency: "", duration: "", instructions: "" }],
+    }));
+  };
+
+  // ── Remove medication field ──
+  const removeMedication = (index) => {
+    setPrescriptionData(prev => ({
+      ...prev,
+      medications: prev.medications.filter((_, i) => i !== index),
+    }));
+  };
+
+  // ── Update medication field ──
+  const updateMedication = (index, field, value) => {
+    setPrescriptionData(prev => ({
+      ...prev,
+      medications: prev.medications.map((med, i) =>
+        i === index ? { ...med, [field]: value } : med
+      ),
+    }));
+  };
+
+  // ── Submit prescription ──
+  const submitPrescription = async () => {
+    if (!appointmentId) return;
+
+    setSavingPrescription(true);
+    try {
+      const token = localStorage.getItem("token");
+      const patientId = state?.patientId;
+
+      const res = await fetch(`${SOCKET_URL}/api/prescriptions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          patientId,
+          appointmentId,
+          medications: prescriptionData.medications.filter(m => m.name.trim()),
+          diagnosis: prescriptionData.diagnosis,
+          notes: prescriptionData.notes,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to save prescription");
+      }
+
+      // Close modal and navigate
+      setShowPrescription(false);
+      socketRef.current?.disconnect();
+      navigate("/doctor/appointments", { state: { callEnded: true, duration: callDuration, prescriptionSaved: true } });
+    } catch (error) {
+      console.error("Save prescription error:", error);
+      alert("Failed to save prescription. Please try again.");
+    } finally {
+      setSavingPrescription(false);
+    }
+  };
 
   // ── Toggle mute ──
   const toggleMute = () => {
@@ -266,14 +393,57 @@ export default function VideoCall() {
     if (track) { track.enabled = !track.enabled; setVideoOff(!track.enabled); }
   };
 
-  // ── Send chat message ──
+  // ── Send chat message via socket ──
   const sendMessage = () => {
-    if (!chatInput.trim()) return;
-    const msg = { id: Date.now(), text: chatInput.trim(), sender: "me", time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) };
-    setMessages((prev) => [...prev, msg]);
+    if (!chatInput.trim() || !socketRef.current) {
+      console.log("[VideoCall] Cannot send message - empty or no socket");
+      return;
+    }
+
+    const msg = {
+      id: Date.now(),
+      text: chatInput.trim(),
+      sender: role,
+      senderName: role === "patient" ? patientName : doctorName,
+      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    };
+
+    console.log("[VideoCall] Sending chat message:", msg);
+
+    // Emit to other peer via socket
+    socketRef.current.emit("chat-message", {
+      roomId,
+      message: msg,
+    });
+
+    // Add to local state (show on right side for sender)
+    setMessages((prev) => [...prev, { ...msg, sender: "me" }]);
     setChatInput("");
-    // In production: emit via socket to peer
   };
+
+  // Listen for incoming chat messages
+  useEffect(() => {
+    if (!socketRef.current) return;
+
+    const handleChatMessage = ({ message }) => {
+      console.log("[VideoCall] Received chat message:", message);
+      // Add to local state (show on left side for receiver)
+      setMessages((prev) => [...prev, { ...message, sender: "other" }]);
+
+      // Increment unread if chat is closed
+      setUnreadCount((prev) => {
+        if (!chatOpen) return prev + 1;
+        return prev;
+      });
+    };
+
+    socketRef.current.on("chat-message", handleChatMessage);
+    console.log("[VideoCall] Chat message listener registered");
+
+    return () => {
+      socketRef.current?.off("chat-message", handleChatMessage);
+    };
+  }, [chatOpen]);
 
   const openChat = () => { setChatOpen(true); setUnreadCount(0); };
 
@@ -388,7 +558,7 @@ export default function VideoCall() {
 
         {/* ── Doctor vitals panel (doctor role) ── */}
         {role === "doctor" && rppg.bpm && (
-          <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-sm p-3 rounded-2xl min-w-[140px]">
+          <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-sm p-3 rounded-2xl min-w-35">
             <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-2">Patient Vitals</p>
             <div className="flex items-center gap-2">
               <ConfidenceDot confidence={rppg.confidence} />
@@ -493,6 +663,146 @@ export default function VideoCall() {
             >
               <span className="material-symbols-outlined text-white text-lg">send</span>
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Prescription Modal (Doctor only after call) ── */}
+      {showPrescription && (
+        <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-[#0D7377] to-[#14A085] p-6 text-white">
+              <h2 className="text-xl font-black flex items-center gap-2">
+                <span className="material-symbols-outlined">medication</span>
+                Write Prescription
+              </h2>
+              <p className="text-white/80 text-sm mt-1">
+                Patient: {patientName} | Call Duration: {formatDuration(callDuration)}
+              </p>
+            </div>
+
+            {/* Form */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {/* Diagnosis */}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Diagnosis</label>
+                <input
+                  type="text"
+                  value={prescriptionData.diagnosis}
+                  onChange={(e) => setPrescriptionData(prev => ({ ...prev, diagnosis: e.target.value }))}
+                  placeholder="Enter diagnosis..."
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[#0D7377]"
+                />
+              </div>
+
+              {/* Medications */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-bold text-gray-700">Medications</label>
+                  <button
+                    onClick={addMedication}
+                    className="text-sm text-[#0D7377] font-semibold flex items-center gap-1 hover:underline"
+                  >
+                    <span className="material-symbols-outlined text-sm">add</span>
+                    Add Medication
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {prescriptionData.medications.map((med, index) => (
+                    <div key={index} className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                      <div className="grid grid-cols-2 gap-3 mb-2">
+                        <input
+                          type="text"
+                          placeholder="Medication name"
+                          value={med.name}
+                          onChange={(e) => updateMedication(index, "name", e.target.value)}
+                          className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0D7377]"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Dosage (e.g., 500mg)"
+                          value={med.dosage}
+                          onChange={(e) => updateMedication(index, "dosage", e.target.value)}
+                          className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0D7377]"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Frequency (e.g., 2x daily)"
+                          value={med.frequency}
+                          onChange={(e) => updateMedication(index, "frequency", e.target.value)}
+                          className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0D7377]"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Duration (e.g., 7 days)"
+                          value={med.duration}
+                          onChange={(e) => updateMedication(index, "duration", e.target.value)}
+                          className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0D7377]"
+                        />
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Special instructions (e.g., Take after food)"
+                        value={med.instructions}
+                        onChange={(e) => updateMedication(index, "instructions", e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0D7377]"
+                      />
+                      {prescriptionData.medications.length > 1 && (
+                        <button
+                          onClick={() => removeMedication(index)}
+                          className="mt-2 text-red-500 text-xs font-semibold flex items-center gap-1 hover:underline"
+                        >
+                          <span className="material-symbols-outlined text-xs">delete</span>
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Additional Notes</label>
+                <textarea
+                  value={prescriptionData.notes}
+                  onChange={(e) => setPrescriptionData(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Any additional instructions or notes..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[#0D7377] resize-none"
+                />
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="p-6 border-t border-gray-100 flex gap-3">
+              <button
+                onClick={() => {
+                  setShowPrescription(false);
+                  socketRef.current?.disconnect();
+                  navigate("/doctor/appointments", { state: { callEnded: true, duration: callDuration } });
+                }}
+                className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+              >
+                Skip & Close
+              </button>
+              <button
+                onClick={submitPrescription}
+                disabled={savingPrescription || !prescriptionData.medications.some(m => m.name.trim())}
+                className="flex-1 py-3 bg-gradient-to-r from-[#0D7377] to-[#14A085] text-white rounded-xl font-bold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {savingPrescription ? (
+                  <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-sm">save</span>
+                    Save Prescription
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import DoctorLayout from "./components/DoctorLayout";
-import { mockEarnings, mockDoctorStats } from "./data/mockData";
+import { getDoctorEarnings } from "../../services/patientService";
 
 const statusColors = {
   paid: "bg-emerald-100 text-emerald-700",
@@ -16,12 +16,35 @@ export default function DoctorEarnings() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState("all");
+  const [stats, setStats] = useState({
+    totalPaid: 0,
+    totalPending: 0,
+    monthlyEarnings: 0,
+  });
 
   useEffect(() => {
-    setTimeout(() => {
-      setTransactions(mockEarnings);
+    const fetchEarnings = async () => {
+      const result = await getDoctorEarnings();
+      if (result.data) {
+        // Transform backend data to match UI format
+        const transformed = result.data.payments.map((p) => ({
+          id: p._id?.slice(-8) || "N/A",
+          patient: p.patient?.full_name || "Patient",
+          amount: p.amount,
+          gateway: p.gateway || "receipt",
+          date: p.createdAt ? new Date(p.createdAt).toLocaleDateString() : "N/A",
+          status: p.status === "paid" ? "paid" : "pending",
+        }));
+        setTransactions(transformed);
+        setStats(result.data.stats || {
+          totalPaid: 0,
+          totalPending: 0,
+          monthlyEarnings: 0,
+        });
+      }
       setLoading(false);
-    }, 400);
+    };
+    fetchEarnings();
   }, []);
 
   const filtered =
@@ -54,7 +77,7 @@ export default function DoctorEarnings() {
           {[
             {
               label: "Monthly Earnings",
-              value: `${mockDoctorStats.monthlyEarnings.toLocaleString()} ETB`,
+              value: `${stats.monthlyEarnings?.toLocaleString() || 0} ETB`,
               icon: "payments",
               color: "from-[#0D7377] to-[#14A085]",
             },
