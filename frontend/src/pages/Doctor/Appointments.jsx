@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import DoctorLayout from "./components/DoctorLayout";
 import { getDoctorAppointments } from "../../services/patientService";
@@ -245,10 +245,7 @@ export default function DoctorAppointments() {
       prev.map((a) => (a._id === apt._id ? { ...a, status: "cancelled" } : a)),
     );
     setConfirmModal(null);
-    showToast(
-      `Appointment ${apt._id?.slice(-8) || "N/A"} has been cancelled.`,
-      "error",
-    );
+    showToast(`Appointment ${apt._id?.slice(-8) || 'N/A'} has been cancelled.`, "error");
   };
 
   const handleStart = async (apt) => {
@@ -422,96 +419,81 @@ export default function DoctorAppointments() {
             </thead>
             <tbody className="divide-y divide-gray-50 text-sm">
               {filtered.map((apt) => {
-                const scheduledDate = new Date(apt.scheduled_at);
-                const dateStr = scheduledDate.toLocaleDateString();
-                const timeStr = scheduledDate.toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                });
-
-                return (
-                  <tr
-                    key={apt._id}
-                    className="hover:bg-teal-50/20 transition-colors"
-                  >
-                    <td className="px-6 py-4 font-mono text-xs text-gray-400">
-                      {apt._id?.slice(-8) || "N/A"}
-                    </td>
-                    <td className="px-6 py-4">
-                      <p className="font-bold text-gray-800">
-                        {apt.patient?.full_name || "Patient"}
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        {apt.patient?.email || ""}
-                      </p>
-                    </td>
-                    <td className="px-6 py-4 text-gray-500">Video Call</td>
-                    <td className="px-6 py-4">
-                      <p className="font-semibold text-gray-700">{dateStr}</p>
-                      <p className="text-xs text-gray-400">{timeStr}</p>
-                    </td>
-                    <td className="px-6 py-4 text-gray-400">
-                      {apt.payment?.amount || 0} ETB
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col gap-1">
+            const scheduledDate = new Date(apt.scheduled_at);
+            const dateStr = scheduledDate.toLocaleDateString();
+            const timeStr = scheduledDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            return (
+                <tr
+                  key={apt._id}
+                  className="hover:bg-teal-50/20 transition-colors"
+                >
+                  <td className="px-6 py-4 font-mono text-xs text-gray-400">
+                    {apt._id?.slice(-8) || 'N/A'}
+                  </td>
+                  <td className="px-6 py-4">
+                    <p className="font-bold text-gray-800">{apt.patient?.full_name || 'Patient'}</p>
+                    <p className="text-xs text-gray-400">{apt.patient?.email || ''}</p>
+                  </td>
+                  <td className="px-6 py-4 text-gray-500">Video Call</td>
+                  <td className="px-6 py-4">
+                    <p className="font-semibold text-gray-700">{dateStr}</p>
+                    <p className="text-xs text-gray-400">{timeStr}</p>
+                  </td>
+                  <td className="px-6 py-4 text-gray-400">{apt.payment?.amount || 0} ETB</td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-col gap-1">
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider w-fit ${statusColors[apt.status]}`}
+                      >
+                        {apt.status.replace("_", " ")}
+                      </span>
+                      {apt.payment && (
                         <span
-                          className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider w-fit ${statusColors[apt.status]}`}
+                          className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider w-fit ${paymentStatusColors[apt.payment.status] || 'bg-gray-100 text-gray-700'}`}
                         >
-                          {apt.status.replace("_", " ")}
+                          {apt.payment.status === 'paid' ? 'Paid' : apt.payment.status === 'awaiting_verification' ? 'Pending' : apt.payment.status}
                         </span>
-                        {apt.payment && (
-                          <span
-                            className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider w-fit ${paymentStatusColors[apt.payment.status] || "bg-gray-100 text-gray-700"}`}
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => setDetailModal(apt)}
+                        className="p-2 text-[#0D7377] hover:bg-teal-50 rounded-lg transition-colors"
+                        title="View details"
+                      >
+                        <span className="material-symbols-outlined text-xl">
+                          visibility
+                        </span>
+                      </button>
+                      {apt.status === "upcoming" && apt.payment?.status === 'paid' && (
+                        <>
+                          <button
+                            onClick={() => handleStart(apt)}
+                            className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                            title="Start consultation"
                           >
-                            {apt.payment.status === "paid"
-                              ? "Paid"
-                              : apt.payment.status === "awaiting_verification"
-                                ? "Pending"
-                                : apt.payment.status}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => setDetailModal(apt)}
-                          className="p-2 text-[#0D7377] hover:bg-teal-50 rounded-lg transition-colors"
-                          title="View details"
-                        >
-                          <span className="material-symbols-outlined text-xl">
-                            visibility
-                          </span>
-                        </button>
-                        {apt.status === "upcoming" &&
-                          apt.payment?.status === "paid" && (
-                            <>
-                              <button
-                                onClick={() => handleStart(apt)}
-                                className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                                title="Start consultation"
-                              >
-                                <span className="material-symbols-outlined text-xl">
-                                  video_call
-                                </span>
-                              </button>
-                              <button
-                                onClick={() => handleCancel(apt)}
-                                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Cancel appointment"
-                              >
-                                <span className="material-symbols-outlined text-xl">
-                                  cancel
-                                </span>
-                              </button>
-                            </>
-                          )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+                            <span className="material-symbols-outlined text-xl">
+                              video_call
+                            </span>
+                          </button>
+                          <button
+                            onClick={() => handleCancel(apt)}
+                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Cancel appointment"
+                          >
+                            <span className="material-symbols-outlined text-xl">
+                              cancel
+                            </span>
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              )})}
             </tbody>
           </table>
         </div>
@@ -540,3 +522,4 @@ export default function DoctorAppointments() {
     </DoctorLayout>
   );
 }
+
