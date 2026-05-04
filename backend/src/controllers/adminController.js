@@ -5,9 +5,15 @@ import Appointment from "../models/Appointment.js";
 
 const buildDoctorResponse = (doctor) => ({
   id: doctor._id,
-  name: doctor.user?.full_name ? (doctor.user.full_name.startsWith("Dr.") ? doctor.user.full_name : `Dr. ${doctor.user.full_name}`) : "Dr. Unknown",
+  name: doctor.user?.full_name
+    ? doctor.user.full_name.startsWith("Dr.")
+      ? doctor.user.full_name
+      : `Dr. ${doctor.user.full_name}`
+    : "Dr. Unknown",
   specialty: doctor.specialty,
-  experience: doctor.years_experience ? `${doctor.years_experience} Years` : "N/A",
+  experience: doctor.years_experience
+    ? `${doctor.years_experience} Years`
+    : "N/A",
   rating: doctor.rating ?? 0,
   status: doctor.status || (doctor.is_verified ? "approved" : "pending"),
   fee: doctor.consultation_fee ?? 0,
@@ -52,7 +58,10 @@ export const updateDoctorStatus = async (req, res) => {
 
     await doctor.populate("user", "full_name email phone avatar_url");
 
-    res.json({ message: "Doctor updated", doctor: buildDoctorResponse(doctor) });
+    res.json({
+      message: "Doctor updated",
+      doctor: buildDoctorResponse(doctor),
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -119,7 +128,9 @@ export const approvePayment = async (req, res) => {
     }
 
     if (payment.status !== "awaiting_verification") {
-      return res.status(400).json({ message: "Payment is not awaiting verification" });
+      return res
+        .status(400)
+        .json({ message: "Payment is not awaiting verification" });
     }
 
     payment.status = "paid";
@@ -143,7 +154,9 @@ export const rejectPayment = async (req, res) => {
     }
 
     if (payment.status !== "awaiting_verification") {
-      return res.status(400).json({ message: "Payment is not awaiting verification" });
+      return res
+        .status(400)
+        .json({ message: "Payment is not awaiting verification" });
     }
 
     payment.status = "failed";
@@ -151,6 +164,122 @@ export const rejectPayment = async (req, res) => {
     await payment.save();
 
     res.json({ message: "Payment rejected", payment });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// GET /api/admin/stats
+export const getDashboardStats = async (_req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const [totalPatients, activeDoctors, appointmentsToday, revenueResult] =
+      await Promise.all([
+        User.countDocuments({ role: "patient" }),
+        Doctor.countDocuments({ is_verified: true }),
+        Appointment.countDocuments({ scheduled_at: { $gte: today } }),
+        Payment.aggregate([
+          { $match: { status: "paid" } },
+          { $group: { _id: null, total: { $sum: "$amount" } } },
+        ]),
+      ]);
+
+    res.json({
+      totalPatients,
+      activeDoctors,
+      appointmentsToday,
+      totalRevenue: revenueResult[0]?.total ?? 0,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// GET /api/admin/users
+export const getAllUsers = async (_req, res) => {
+  try {
+    const users = await User.find({ role: { $ne: "admin" } })
+      .select("-password")
+      .sort({ createdAt: -1 });
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// PATCH /api/admin/users/:id/block
+export const blockUser = async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { is_blocked: true },
+      { new: true },
+    ).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json({ message: "User blocked", user });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// PATCH /api/admin/users/:id/unblock
+export const unblockUser = async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { is_blocked: false },
+      { new: true },
+    ).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json({ message: "User unblocked", user });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// GET /api/admin/appointments
+export const getAllAppointments = async (_req, res) => {
+  try {
+    const appointments = await Appointment.find()
+      .populate("patient", "full_name email")
+      .populate({
+        path: "doctor",
+        populate: { path: "user", select: "full_name" },
+      })
+      .sort({ scheduled_at: -1 });
+
+    res.json(
+      appointments.map((a) => ({
+        id: a._id,
+        patient: a.patient?.full_name || "Unknown",
+        patient_email: a.patient?.email,
+        doctor: a.doctor?.user?.full_name
+          ? `Dr. ${a.doctor.user.full_name}`
+          : "Unknown",
+        specialty: a.doctor?.specialty || "",
+        scheduled_at: a.scheduled_at,
+        status: a.status,
+        payment_status: a.payment?.status,
+      })),
+    );
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// PATCH /api/admin/appointments/:id/cancel
+export const cancelAppointment = async (req, res) => {
+  try {
+    const appt = await Appointment.findByIdAndUpdate(
+      req.params.id,
+      { status: "cancelled" },
+      { new: true },
+    );
+    if (!appt)
+      return res.status(404).json({ message: "Appointment not found" });
+    res.json({ message: "Appointment cancelled", appointment: appt });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

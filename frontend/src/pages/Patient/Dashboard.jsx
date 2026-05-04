@@ -181,7 +181,9 @@ export default function PatientDashboard() {
   const [vitals, setVitals] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [userName, setUserName] = useState("Patient");
+  const [userName, _setUserName] = useState(
+    () => localStorage.getItem("userName") || "Patient",
+  );
   const [counters, setCounters] = useState({
     appointments: 0,
     prescriptions: 0,
@@ -189,24 +191,25 @@ export default function PatientDashboard() {
     spent: 0,
   });
 
-  // Get user name from localStorage
-  useEffect(() => {
-    const storedName = localStorage.getItem("userName");
-    if (storedName) {
-      setUserName(storedName);
-    }
-  }, []);
+  // Get user name from localStorage — handled by lazy useState initializer above
 
-  // SOS Emergency State
+  // SOS Emergency State (UI not yet implemented)
+  // eslint-disable-next-line no-unused-vars
   const [sosActive, setSosActive] = useState(false);
+  // eslint-disable-next-line no-unused-vars
   const [sosStatus, setSosStatus] = useState("");
+  // eslint-disable-next-line no-unused-vars
   const [inCall, setInCall] = useState(false);
   const [callId, setCallId] = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
+  // eslint-disable-next-line no-unused-vars
   const [paymentVerified, setPaymentVerified] = useState(false);
+  // eslint-disable-next-line no-unused-vars
   const [paymentLoading, setPaymentLoading] = useState(false);
   const videoContainerRef = useRef(null);
+  // eslint-disable-next-line no-unused-vars
   const chatContainerRef = useRef(null);
   const socketRef = useRef(null);
   const videoClientRef = useRef(null);
@@ -215,18 +218,21 @@ export default function PatientDashboard() {
 
   // Initialize Socket.io connection
   useEffect(() => {
-    const socketUrl = import.meta.env.VITE_SOCKET_URL || "http://localhost:3001";
+    const socketUrl =
+      import.meta.env.VITE_SOCKET_URL || "http://localhost:3001";
     socketRef.current = window.io(socketUrl);
 
     // Listen for SOS acceptance
     const userId = localStorage.getItem("userId");
     if (userId) {
-      socketRef.current.on(`sos-accepted-${userId}`, (data) => {
+      socketRef.current.on(`sos-accepted-${userId}`, () => {
         setSosStatus("Doctor has joined the call!");
       });
 
       socketRef.current.on(`sos-declined-${userId}`, () => {
-        setSosStatus("Doctor is unavailable. Please try again or contact emergency services.");
+        setSosStatus(
+          "Doctor is unavailable. Please try again or contact emergency services.",
+        );
         setTimeout(() => {
           setSosActive(false);
           setSosStatus("");
@@ -260,11 +266,13 @@ export default function PatientDashboard() {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ userId, serviceType: "sos_emergency" }),
-        }
+        },
       );
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ message: "Payment verification failed" }));
+        const errorData = await res
+          .json()
+          .catch(() => ({ message: "Payment verification failed" }));
         throw new Error(errorData.message || "Payment verification failed");
       }
 
@@ -275,7 +283,9 @@ export default function PatientDashboard() {
         setSosStatus("Payment verified. Initializing emergency call...");
         return true;
       } else {
-        setSosStatus("Payment required. Please complete payment to access emergency services.");
+        setSosStatus(
+          "Payment required. Please complete payment to access emergency services.",
+        );
         return false;
       }
     } catch (error) {
@@ -288,6 +298,7 @@ export default function PatientDashboard() {
   };
 
   // Handle SOS Emergency Button
+  // eslint-disable-next-line no-unused-vars
   const handleSOS = async () => {
     try {
       setSosActive(true);
@@ -320,26 +331,33 @@ export default function PatientDashboard() {
               Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({ userId }),
-          }
+          },
         );
 
         if (!streamTokenRes.ok) {
           const errorText = await streamTokenRes.text();
-          throw new Error(`Stream token error: ${streamTokenRes.status} ${errorText}`);
+          throw new Error(
+            `Stream token error: ${streamTokenRes.status} ${errorText}`,
+          );
         }
 
         streamTokenData = await streamTokenRes.json();
       } catch (tokenError) {
         console.error("Stream token error:", tokenError);
-        setSosStatus("Video service temporarily unavailable. Chat-only mode enabled.");
+        setSosStatus(
+          "Video service temporarily unavailable. Chat-only mode enabled.",
+        );
         // Continue with chat-only mode
       }
 
       // Get assigned doctor (from most recent appointment or default)
-      const assignedDoctorId = localStorage.getItem("assignedDoctorId") || appointments[0]?.doctorId;
+      const assignedDoctorId =
+        localStorage.getItem("assignedDoctorId") || appointments[0]?.doctorId;
 
       if (!assignedDoctorId) {
-        setSosStatus("No assigned doctor found. Please contact emergency services: 911");
+        setSosStatus(
+          "No assigned doctor found. Please contact emergency services: 911",
+        );
         return;
       }
 
@@ -358,23 +376,29 @@ export default function PatientDashboard() {
               patientId: userId,
               doctorId: assignedDoctorId,
             }),
-          }
+          },
         );
 
         if (!callRes.ok) {
           const errorText = await callRes.text();
-          throw new Error(`Call creation error: ${callRes.status} ${errorText}`);
+          throw new Error(
+            `Call creation error: ${callRes.status} ${errorText}`,
+          );
         }
 
         callData = await callRes.json();
       } catch (callError) {
         console.error("Call creation error:", callError);
-        setSosStatus("Failed to create emergency call. Please contact emergency services: 911");
+        setSosStatus(
+          "Failed to create emergency call. Please contact emergency services: 911",
+        );
         return;
       }
 
       if (!callData?.callId) {
-        setSosStatus("Failed to create emergency call. Please contact emergency services: 911");
+        setSosStatus(
+          "Failed to create emergency call. Please contact emergency services: 911",
+        );
         return;
       }
 
@@ -412,7 +436,7 @@ export default function PatientDashboard() {
           const chatClient = StreamChat.getInstance(streamTokenData.apiKey);
           await chatClient.connectUser(
             { id: userId, name: userName },
-            streamTokenData.token
+            streamTokenData.token,
           );
           chatClientRef.current = chatClient;
 
@@ -429,7 +453,9 @@ export default function PatientDashboard() {
                 id: event.message.id,
                 text: event.message.text,
                 user: event.message.user.name,
-                timestamp: new Date(event.message.created_at).toLocaleTimeString(),
+                timestamp: new Date(
+                  event.message.created_at,
+                ).toLocaleTimeString(),
               },
             ]);
           });
@@ -450,11 +476,14 @@ export default function PatientDashboard() {
       }
     } catch (error) {
       console.error("SOS Error:", error);
-      setSosStatus(`Failed to connect: ${error.message}. Please call emergency services: 911`);
+      setSosStatus(
+        `Failed to connect: ${error.message}. Please call emergency services: 911`,
+      );
     }
   };
 
   // End SOS Call
+  // eslint-disable-next-line no-unused-vars
   const endSOSCall = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -499,11 +528,12 @@ export default function PatientDashboard() {
   };
 
   // Send chat message
+  // eslint-disable-next-line no-unused-vars
   const sendMessage = async () => {
     if (!newMessage.trim() || !callId) return;
 
     try {
-      const userId = localStorage.getItem("userId");
+      const _userId = localStorage.getItem("userId");
       const channel = chatClientRef.current?.channel("messaging", callId);
       if (channel) {
         await channel.sendMessage({ text: newMessage });
@@ -536,21 +566,25 @@ export default function PatientDashboard() {
         const paymentsData = paymentsResult.data || [];
 
         // Calculate stats from real data
-        const upcomingAppointments = appointmentsData.filter(a => a.status === "upcoming").length;
+        const upcomingAppointments = appointmentsData.filter(
+          (a) => a.status === "upcoming",
+        ).length;
         const totalSpent = paymentsData
-          .filter(p => p.status === "paid")
+          .filter((p) => p.status === "paid")
           .reduce((sum, p) => sum + (p.amount || 0), 0);
 
         setStats({
           upcomingAppointments,
           activePrescriptions: 0, // Will be updated when prescriptions API is available
-          pendingLabResults: 0,   // Will be updated when lab results API is available
+          pendingLabResults: 0, // Will be updated when lab results API is available
           totalSpent,
         });
 
-        setAppointments(appointmentsData.filter(a => a.status === "upcoming").slice(0, 3));
+        setAppointments(
+          appointmentsData.filter((a) => a.status === "upcoming").slice(0, 3),
+        );
         setActivity([]); // Activity feed will be populated when API is available
-        setVitals([]);   // Vitals will be populated when API is available
+        setVitals([]); // Vitals will be populated when API is available
         setPrescriptions([]); // Prescriptions will be populated when API is available
         setLoading(false);
       } catch (error) {
@@ -594,7 +628,6 @@ export default function PatientDashboard() {
 
   return (
     <PatientLayout title="Dashboard">
-
       <div className="space-y-6">
         {/* ── Welcome Banner ── */}
         <div
@@ -678,7 +711,11 @@ export default function PatientDashboard() {
             icon="calendar_today"
             color="#E05C8A"
             bg="bg-rose-50"
-            trend={counters.appointments > 0 ? `${counters.appointments} upcoming` : "No upcoming"}
+            trend={
+              counters.appointments > 0
+                ? `${counters.appointments} upcoming`
+                : "No upcoming"
+            }
           />
           <MetricTile
             label="Active Prescriptions"
@@ -686,7 +723,11 @@ export default function PatientDashboard() {
             icon="medication"
             color="#d97706"
             bg="bg-amber-50"
-            trend={counters.prescriptions > 0 ? `${counters.prescriptions} active` : "No active"}
+            trend={
+              counters.prescriptions > 0
+                ? `${counters.prescriptions} active`
+                : "No active"
+            }
           />
           <MetricTile
             label="Pending Lab Results"
@@ -694,7 +735,9 @@ export default function PatientDashboard() {
             icon="biotech"
             color="#7c3aed"
             bg="bg-violet-50"
-            trend={counters.labs > 0 ? `${counters.labs} pending` : "No pending"}
+            trend={
+              counters.labs > 0 ? `${counters.labs} pending` : "No pending"
+            }
           />
           <MetricTile
             label="Total Spent (ETB)"
@@ -702,7 +745,9 @@ export default function PatientDashboard() {
             icon="payments"
             color="#059669"
             bg="bg-emerald-50"
-            trend={counters.spent > 0 ? "Payments up to date" : "No payments yet"}
+            trend={
+              counters.spent > 0 ? "Payments up to date" : "No payments yet"
+            }
           />
         </div>
 
@@ -720,7 +765,9 @@ export default function PatientDashboard() {
                     Vitals Overview
                   </h3>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    {vitals.length > 0 ? "Heart rate & SpO₂ — last 7 readings" : "No vitals recorded yet"}
+                    {vitals.length > 0
+                      ? "Heart rate & SpO₂ — last 7 readings"
+                      : "No vitals recorded yet"}
                   </p>
                 </div>
                 {vitals.length > 0 && (
@@ -750,7 +797,9 @@ export default function PatientDashboard() {
               ) : (
                 <div className="h-28 flex items-center justify-center text-gray-400">
                   <div className="text-center">
-                    <span className="material-symbols-outlined text-3xl mb-2">monitor_heart</span>
+                    <span className="material-symbols-outlined text-3xl mb-2">
+                      monitor_heart
+                    </span>
                     <p className="text-xs">Vitals data will appear here</p>
                   </div>
                 </div>
@@ -877,8 +926,10 @@ export default function PatientDashboard() {
                 <div className="space-y-3">
                   {appointments.map((apt) => {
                     const scheduledDate = new Date(apt.scheduled_at);
-                    const dateStr = scheduledDate.toLocaleDateString();
-                    const timeStr = scheduledDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const timeStr = scheduledDate.toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    });
                     return (
                       <div
                         key={apt._id}
@@ -887,7 +938,8 @@ export default function PatientDashboard() {
                         <div
                           className="w-12 h-12 rounded-xl flex flex-col items-center justify-center shrink-0 text-white"
                           style={{
-                            background: "linear-gradient(135deg,#E05C8A,#F4845F)",
+                            background:
+                              "linear-gradient(135deg,#E05C8A,#F4845F)",
                           }}
                         >
                           <span className="text-sm font-black leading-none">

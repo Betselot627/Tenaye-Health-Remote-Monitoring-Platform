@@ -1,9 +1,9 @@
 /**
  * ADMIN SERVICE
- * 
+ *
  * All admin-related API calls are here.
  * Currently returns mock data.
- * 
+ *
  * TO INTEGRATE BACKEND:
  * 1. Import supabase from "./supabase"
  * 2. Replace each mock return with the real Supabase query shown in the comment above it
@@ -11,17 +11,20 @@
  */
 
 import {
-  mockStats,
-  mockUsers,
-  mockDoctors,
-  mockAppointments,
   mockBlogs,
-  mockPayments,
   mockNotifications,
   mockActivity,
 } from "../pages/Admin/data/mockData";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("token");
+  return {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  };
+};
 
 const readResponseError = async (response) => {
   const contentType = response.headers.get("content-type") || "";
@@ -33,62 +36,74 @@ const readResponseError = async (response) => {
       return "Request failed";
     }
   }
-
   const text = await response.text();
   return text || `Request failed with status ${response.status}`;
 };
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
 
-/**
- * BACKEND:
- * const { count: totalPatients } = await supabase.from("profiles").select("*", { count: "exact" }).eq("role", "patient")
- * const { count: activeDoctors } = await supabase.from("doctors").select("*", { count: "exact" }).eq("is_verified", true)
- * const { count: appointmentsToday } = await supabase.from("appointments").select("*", { count: "exact" }).gte("scheduled_at", todayStart)
- * const { data: revenue } = await supabase.from("payments").select("amount").eq("status", "paid")
- */
 export const getDashboardStats = async () => {
-  return { data: mockStats, error: null };
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/admin/stats`, {
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error(await readResponseError(response));
+    const data = await response.json();
+    return { data, error: null };
+  } catch (err) {
+    return { data: null, error: err.message };
+  }
 };
 
-/**
- * BACKEND:
- * const { data } = await supabase.from("appointments")
- *   .select("id, patient:profiles(full_name), doctor:doctors(profiles(full_name)), scheduled_at, status")
- *   .order("created_at", { ascending: false }).limit(10)
- */
 export const getRecentActivity = async () => {
   return { data: mockActivity, error: null };
 };
 
 // ─── USERS ────────────────────────────────────────────────────────────────────
 
-/**
- * BACKEND:
- * const { data } = await supabase.from("profiles")
- *   .select("id, full_name, email, role, gender, age, created_at")
- *   .eq("role", "patient")
- *   .order("created_at", { ascending: false })
- */
 export const getPatients = async () => {
-  return { data: mockUsers, error: null };
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/admin/users`, {
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error(await readResponseError(response));
+    const data = await response.json();
+    return { data: data.filter((u) => u.role === "patient"), error: null };
+  } catch (err) {
+    return { data: null, error: err.message };
+  }
 };
 
-/**
- * BACKEND:
- * await supabase.auth.admin.updateUserById(userId, { ban_duration: "876600h" })
- * // or store a "blocked" flag in profiles table
- */
 export const blockUser = async (userId) => {
-  return { error: null };
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/admin/users/${userId}/block`,
+      {
+        method: "PATCH",
+        headers: getAuthHeaders(),
+      },
+    );
+    if (!response.ok) throw new Error(await readResponseError(response));
+    return { error: null };
+  } catch (err) {
+    return { error: err.message };
+  }
 };
 
-/**
- * BACKEND:
- * await supabase.auth.admin.updateUserById(userId, { ban_duration: "none" })
- */
 export const unblockUser = async (userId) => {
-  return { error: null };
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/admin/users/${userId}/unblock`,
+      {
+        method: "PATCH",
+        headers: getAuthHeaders(),
+      },
+    );
+    if (!response.ok) throw new Error(await readResponseError(response));
+    return { error: null };
+  } catch (err) {
+    return { error: err.message };
+  }
 };
 
 // ─── DOCTORS ──────────────────────────────────────────────────────────────────
@@ -128,7 +143,10 @@ export const getPendingDoctorApplications = async () => {
   try {
     const { data, error } = await getDoctors();
     if (error) throw new Error(error);
-    return { data: data.filter((doctor) => doctor.status === "pending"), error: null };
+    return {
+      data: data.filter((doctor) => doctor.status === "pending"),
+      error: null,
+    };
   } catch (err) {
     return { data: null, error: err.message };
   }
@@ -147,14 +165,17 @@ export const getPendingDoctorApplications = async () => {
 export const approveDoctor = async (doctorId) => {
   try {
     const token = localStorage.getItem("token");
-    const response = await fetch(`${API_BASE_URL}/api/admin/doctors/${doctorId}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+    const response = await fetch(
+      `${API_BASE_URL}/api/admin/doctors/${doctorId}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: "approved" }),
       },
-      body: JSON.stringify({ status: "approved" }),
-    });
+    );
 
     if (!response.ok) {
       throw new Error(await readResponseError(response));
@@ -176,14 +197,17 @@ export const approveDoctor = async (doctorId) => {
 export const rejectDoctor = async (doctorId, reason) => {
   try {
     const token = localStorage.getItem("token");
-    const response = await fetch(`${API_BASE_URL}/api/admin/doctors/${doctorId}`, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+    const response = await fetch(
+      `${API_BASE_URL}/api/admin/doctors/${doctorId}`,
+      {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ reason }),
       },
-      body: JSON.stringify({ reason }),
-    });
+    );
 
     if (!response.ok) {
       throw new Error(await readResponseError(response));
@@ -203,14 +227,17 @@ export const rejectDoctor = async (doctorId, reason) => {
 export const suspendDoctor = async (doctorId) => {
   try {
     const token = localStorage.getItem("token");
-    const response = await fetch(`${API_BASE_URL}/api/admin/doctors/${doctorId}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+    const response = await fetch(
+      `${API_BASE_URL}/api/admin/doctors/${doctorId}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: "suspended" }),
       },
-      body: JSON.stringify({ status: "suspended" }),
-    });
+    );
 
     if (!response.ok) {
       throw new Error(await readResponseError(response));
@@ -240,18 +267,32 @@ export const reinstateDoctor = async (doctorId) => {
  *   .order("scheduled_at", { ascending: false })
  */
 export const getAllAppointments = async () => {
-  return { data: mockAppointments, error: null };
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/admin/appointments`, {
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error(await readResponseError(response));
+    const data = await response.json();
+    return { data, error: null };
+  } catch (err) {
+    return { data: null, error: err.message };
+  }
 };
 
-/**
- * BACKEND:
- * await supabase.from("appointments")
- *   .update({ status: "cancelled", cancellation_reason: reason })
- *   .eq("id", appointmentId)
- * // Also trigger refund if payment exists
- */
-export const cancelAppointment = async (appointmentId, reason) => {
-  return { error: null };
+export const cancelAppointment = async (appointmentId) => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/admin/appointments/${appointmentId}/cancel`,
+      {
+        method: "PATCH",
+        headers: getAuthHeaders(),
+      },
+    );
+    if (!response.ok) throw new Error(await readResponseError(response));
+    return { error: null };
+  } catch (err) {
+    return { error: err.message };
+  }
 };
 
 // ─── MEDICAL RECORDS ──────────────────────────────────────────────────────────
@@ -283,9 +324,30 @@ export const getMedicalRecordsStats = async () => {
 export const getCriticalAlerts = async () => {
   return {
     data: [
-      { id: 1, patient: "Bereket Tadesse", alert: "Critical SpO2: 88%", doctor: "Dr. Alem Bekele", time: "2 mins ago", acknowledged: false },
-      { id: 2, patient: "Sara Haile", alert: "Blood Sugar: 210 mg/dL", doctor: "Dr. Tigist Worku", time: "15 mins ago", acknowledged: false },
-      { id: 3, patient: "Yonas Bekele", alert: "Heart Rate: 155 BPM", doctor: "Dr. Michael Chen", time: "1 hour ago", acknowledged: true },
+      {
+        id: 1,
+        patient: "Bereket Tadesse",
+        alert: "Critical SpO2: 88%",
+        doctor: "Dr. Alem Bekele",
+        time: "2 mins ago",
+        acknowledged: false,
+      },
+      {
+        id: 2,
+        patient: "Sara Haile",
+        alert: "Blood Sugar: 210 mg/dL",
+        doctor: "Dr. Tigist Worku",
+        time: "15 mins ago",
+        acknowledged: false,
+      },
+      {
+        id: 3,
+        patient: "Yonas Bekele",
+        alert: "Heart Rate: 155 BPM",
+        doctor: "Dr. Michael Chen",
+        time: "1 hour ago",
+        acknowledged: true,
+      },
     ],
     error: null,
   };
@@ -453,10 +515,13 @@ export const getAllPayments = async () => {
 export const approvePayment = async (paymentId) => {
   try {
     const token = localStorage.getItem("token");
-    const response = await fetch(`${API_BASE_URL}/api/admin/payments/${paymentId}/approve`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/admin/payments/${paymentId}/approve`,
+      {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
 
     if (!response.ok) {
       throw new Error(await readResponseError(response));
@@ -471,14 +536,17 @@ export const approvePayment = async (paymentId) => {
 export const rejectPayment = async (paymentId, reason) => {
   try {
     const token = localStorage.getItem("token");
-    const response = await fetch(`${API_BASE_URL}/api/admin/payments/${paymentId}/reject`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+    const response = await fetch(
+      `${API_BASE_URL}/api/admin/payments/${paymentId}/reject`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ reason }),
       },
-      body: JSON.stringify({ reason }),
-    });
+    );
 
     if (!response.ok) {
       throw new Error(await readResponseError(response));

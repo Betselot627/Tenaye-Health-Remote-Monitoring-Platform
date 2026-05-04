@@ -3,11 +3,21 @@ import CallLog from "../models/CallLog.js";
 import User from "../models/User.js";
 import Doctor from "../models/Doctor.js";
 
-// Initialize Stream client with API credentials from environment variables
-const streamClient = new StreamClient(
-  process.env.STREAM_API_KEY,
-  process.env.STREAM_API_SECRET,
-);
+// Lazy-initialize Stream client so missing env vars don't crash the server
+let _streamClient = null;
+const getStreamClient = () => {
+  if (!_streamClient) {
+    const key = process.env.STREAM_API_KEY;
+    const secret = process.env.STREAM_API_SECRET;
+    if (!key || !secret) {
+      throw new Error(
+        "STREAM_API_KEY and STREAM_API_SECRET must be set in .env",
+      );
+    }
+    _streamClient = new StreamClient(key, secret);
+  }
+  return _streamClient;
+};
 
 /**
  * Generate a user token for Stream Video/Chat
@@ -22,7 +32,7 @@ export const generateToken = async (req, res) => {
     }
 
     // Generate a user token valid for 24 hours
-    const token = streamClient.generateUserToken({
+    const token = getStreamClient().generateUserToken({
       user_id: userId,
       exp: Math.round(Date.now() / 1000) + 60 * 60 * 24, // 24 hours
     });
@@ -34,7 +44,9 @@ export const generateToken = async (req, res) => {
     });
   } catch (error) {
     console.error("[Stream] Token generation error:", error);
-    res.status(500).json({ message: "Failed to generate token", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Failed to generate token", error: error.message });
   }
 };
 
@@ -59,7 +71,10 @@ export const createCall = async (req, res) => {
     }
 
     // Verify doctor exists
-    const doctor = await Doctor.findById(doctorId).populate("user", "full_name");
+    const doctor = await Doctor.findById(doctorId).populate(
+      "user",
+      "full_name",
+    );
     if (!doctor) {
       return res.status(404).json({ message: "Doctor not found" });
     }
@@ -68,7 +83,7 @@ export const createCall = async (req, res) => {
     const callId = `sos_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
     // Create the call using Stream API
-    const call = streamClient.video.call("default", callId);
+    const call = getStreamClient().video.call("default", callId);
     await call.create({
       data: {
         created_by_id: patientId,
@@ -101,7 +116,9 @@ export const createCall = async (req, res) => {
     });
   } catch (error) {
     console.error("[Stream] Call creation error:", error);
-    res.status(500).json({ message: "Failed to create call", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Failed to create call", error: error.message });
   }
 };
 
@@ -118,15 +135,14 @@ export const endCall = async (req, res) => {
     }
 
     // Update call status in database
-    await CallLog.findOneAndUpdate(
-      { callId },
-      { status: "ended" },
-    );
+    await CallLog.findOneAndUpdate({ callId }, { status: "ended" });
 
     res.json({ message: "Call ended successfully" });
   } catch (error) {
     console.error("[Stream] End call error:", error);
-    res.status(500).json({ message: "Failed to end call", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Failed to end call", error: error.message });
   }
 };
 
@@ -159,6 +175,8 @@ export const getCallHistory = async (req, res) => {
     res.json(callHistory);
   } catch (error) {
     console.error("[Stream] Get call history error:", error);
-    res.status(500).json({ message: "Failed to get call history", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Failed to get call history", error: error.message });
   }
 };

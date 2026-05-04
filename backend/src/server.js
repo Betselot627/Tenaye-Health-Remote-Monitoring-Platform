@@ -1,6 +1,6 @@
-import { setDefaultResultOrder, setServers } from 'dns';
-setDefaultResultOrder('ipv4first');
-setServers(['8.8.8.8', '1.1.1.1']);
+import { setDefaultResultOrder, setServers } from "dns";
+setDefaultResultOrder("ipv4first");
+setServers(["8.8.8.8", "1.1.1.1"]);
 
 import express from "express";
 import { createServer } from "http";
@@ -32,7 +32,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '../uploads/receipts');
+const uploadsDir = path.join(__dirname, "../uploads/receipts");
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
@@ -40,18 +40,33 @@ if (!fs.existsSync(uploadsDir)) {
 const app = express();
 const httpServer = createServer(app);
 
-const io = new Server(httpServer, {
-  cors: {
-    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
-    methods: ["GET", "POST"],
+const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173")
+  .split(",")
+  .map((o) => o.trim())
+  .concat(["http://localhost:5174", "http://localhost:5175"]);
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS blocked: ${origin}`));
+    }
   },
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+};
+
+const io = new Server(httpServer, {
+  cors: { origin: allowedOrigins, methods: ["GET", "POST"] },
 });
 
-app.use(cors({ origin: process.env.CORS_ORIGIN || "http://localhost:5173" }));
+app.use(cors(corsOptions));
 app.use(express.json({ limit: "5mb" }));
 
 // Serve static files for uploads
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 // API Routes
 app.use("/api/auth", authRoutes);
@@ -98,7 +113,9 @@ io.on("connection", (socket) => {
   // Scheduled appointment call started by doctor
   socket.on("call-started", (data) => {
     const { patientId, doctorId, doctorName, appointmentId, timestamp } = data;
-    console.log(`[Socket] Doctor ${doctorId} started call for appointment ${appointmentId}`);
+    console.log(
+      `[Socket] Doctor ${doctorId} started call for appointment ${appointmentId}`,
+    );
 
     // Notify the patient that doctor has started the call
     io.emit(`call-started-${patientId}`, {
@@ -120,7 +137,9 @@ io.on("connection", (socket) => {
   // Missed call notification (when patient doesn't join within time window)
   socket.on("call-missed", (data) => {
     const { patientId, doctorId, doctorName, appointmentId } = data;
-    console.log(`[Socket] Missed call from doctor ${doctorId} to patient ${patientId}`);
+    console.log(
+      `[Socket] Missed call from doctor ${doctorId} to patient ${patientId}`,
+    );
 
     io.emit(`call-missed-${patientId}`, {
       doctorId,
@@ -133,7 +152,9 @@ io.on("connection", (socket) => {
   // Chat message relay between patient and doctor in the same room
   socket.on("chat-message", (data) => {
     const { roomId, message } = data;
-    console.log(`[Socket] Chat message in room ${roomId} from ${message.senderName}`);
+    console.log(
+      `[Socket] Chat message in room ${roomId} from ${message.senderName}`,
+    );
 
     // Broadcast to all other clients in the room (excluding sender)
     socket.to(roomId).emit("chat-message", { message });
