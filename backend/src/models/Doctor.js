@@ -12,6 +12,13 @@ const doctorSchema = new mongoose.Schema(
     bio: { type: String },
     rating: { type: Number, default: 0 },
     years_experience: { type: Number },
+    license_number: { type: String },
+    hospital: { type: String },
+    status: {
+      type: String,
+      enum: ["pending", "approved", "suspended"],
+      default: "pending",
+    },
     is_verified: { type: Boolean, default: false },
     consultation_fee: { type: Number },
     availability: [{ day: String, slots: [String] }],

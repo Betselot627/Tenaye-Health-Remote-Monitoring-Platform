@@ -81,9 +81,26 @@ export default function DoctorApply() {
 
     setLoading(true);
     try {
-      // In production: POST /api/auth/register/doctor
-      // For now simulate a 1.5s API call
-      await new Promise((r) => setTimeout(r, 1500));
+      const res = await fetch("http://localhost:3001/api/auth/register/doctor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          full_name: form.full_name,
+          email: form.email,
+          password: form.password,
+          phone: form.phone,
+          gender: form.gender,
+          age: form.age ? Number(form.age) : undefined,
+          specialty: form.specialty,
+          years_experience: form.years_experience ? Number(form.years_experience) : undefined,
+          license_number: form.license_number,
+          hospital: form.hospital,
+          consultation_fee: form.consultation_fee ? Number(form.consultation_fee) : undefined,
+          bio: form.bio,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Submission failed. Please try again.");
       setStep(3);
     } catch (err) {
       setError(err.message || "Submission failed. Please try again.");
@@ -110,7 +127,7 @@ export default function DoctorApply() {
         const done = step > num;
         return (
           <div key={name} className="flex items-center gap-2 flex-1">
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 transition-all
+            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 transition-all
               ${done ? "bg-emerald-500 text-white" : active ? "bg-[#632a7e] text-white" : "bg-gray-100 text-gray-400"}`}>
               {done ? <span className="material-symbols-outlined text-sm">check</span> : num}
             </div>
@@ -168,7 +185,7 @@ export default function DoctorApply() {
                 "Patients can start booking appointments with you",
               ].map((step, i) => (
                 <div key={i} className="flex items-start gap-2 text-xs text-gray-600">
-                  <span className="w-5 h-5 rounded-full bg-[#632a7e] text-white flex items-center justify-center text-[10px] font-black flex-shrink-0 mt-0.5">
+                  <span className="w-5 h-5 rounded-full bg-[#632a7e] text-white flex items-center justify-center text-[10px] font-black shrink-0 mt-0.5">
                     {i + 1}
                   </span>
                   {step}

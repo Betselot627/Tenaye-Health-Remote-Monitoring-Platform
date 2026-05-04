@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PatientLayout from "./components/PatientLayout";
-import { mockLabResults } from "./data/mockData";
 
 const statusColors = {
   pending: "bg-amber-100 text-amber-700",
@@ -143,12 +142,29 @@ function LabDetailModal({ lab, onClose }) {
 }
 
 export default function PatientLabResults() {
-  const [labs] = useState(mockLabResults);
+  const [labs, setLabs] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [selected, setSelected] = useState(null);
 
+  useEffect(() => {
+    // TODO: Fetch lab results from API when endpoint is available
+    // For now, show empty state
+    setLoading(false);
+  }, []);
+
   const filtered =
     filter === "all" ? labs : labs.filter((l) => l.status === filter);
+
+  if (loading) {
+    return (
+      <PatientLayout title="Lab Results">
+        <div className="flex items-center justify-center h-64">
+          <div className="w-8 h-8 border-4 border-[#E05C8A] border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      </PatientLayout>
+    );
+  }
 
   return (
     <PatientLayout title="Lab Results">

@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PatientLayout from "./components/PatientLayout";
-import { mockVitals } from "./data/mockData";
 
 function VitalCard({
   label,
@@ -45,11 +44,29 @@ function VitalCard({
 }
 
 export default function PatientVitals() {
-  const [vitals] = useState(mockVitals);
+  const [vitals, setVitals] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
+
+  useEffect(() => {
+    // TODO: Fetch vitals from API when endpoint is available
+    // For now, show empty state
+    setLoading(false);
+  }, []);
+
+  if (loading) {
+    return (
+      <PatientLayout title="My Vitals">
+        <div className="flex items-center justify-center h-64">
+          <div className="w-8 h-8 border-4 border-[#E05C8A] border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      </PatientLayout>
+    );
+  }
+
   const latest = vitals[0];
 
-  const vitalCards = [
+  const vitalCards = latest ? [
     {
       label: "Blood Pressure",
       value: latest.bp,
@@ -100,7 +117,7 @@ export default function PatientVitals() {
       status: "Stable",
       statusColor: "bg-blue-100 text-blue-700",
     },
-  ];
+  ] : [];
 
   return (
     <PatientLayout title="My Vitals">
@@ -115,7 +132,7 @@ export default function PatientVitals() {
               My Vitals
             </h2>
             <p className="text-gray-400 text-sm mt-0.5">
-              Last updated: {latest.date}
+              {latest ? `Last updated: ${latest.date}` : "No vitals recorded yet"}
             </p>
           </div>
           <div className="flex gap-2">
@@ -131,7 +148,14 @@ export default function PatientVitals() {
           </div>
         </div>
 
-        {activeTab === "overview" ? (
+        {vitals.length === 0 ? (
+          <div className="bg-white rounded-2xl p-12 text-center border border-gray-100">
+            <span className="material-symbols-outlined text-5xl text-gray-200">
+              monitor_heart
+            </span>
+            <p className="text-gray-400 mt-3">No vitals recorded yet</p>
+          </div>
+        ) : activeTab === "overview" ? (
           <>
             {/* Latest vitals grid */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">

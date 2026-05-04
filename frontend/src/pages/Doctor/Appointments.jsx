@@ -1,13 +1,20 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import DoctorLayout from "./components/DoctorLayout";
-import { mockDoctorAppointments } from "./data/mockData";
+import { getDoctorAppointments } from "../../services/patientService";
 
 const statusColors = {
   upcoming: "bg-blue-100 text-blue-700",
   completed: "bg-emerald-100 text-emerald-700",
   in_progress: "bg-teal-100 text-purple-700",
   cancelled: "bg-red-100 text-red-700",
+};
+
+const paymentStatusColors = {
+  pending: "bg-amber-100 text-amber-700",
+  paid: "bg-emerald-100 text-emerald-700",
+  failed: "bg-red-100 text-red-700",
+  awaiting_verification: "bg-purple-100 text-purple-700",
 };
 
 function Toast({ message, type, onClose }) {
@@ -56,6 +63,18 @@ function ConfirmModal({ title, message, confirmLabel, onConfirm, onCancel }) {
 }
 
 function AppointmentDetailModal({ apt, onClose, onStart }) {
+  const scheduledDate = new Date(apt.scheduled_at);
+  const dateStr = scheduledDate.toLocaleDateString();
+  const timeStr = scheduledDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  // Check if within allowed call window (15 min before to 30 min after scheduled time)
+  const now = new Date();
+  const callWindowStart = new Date(scheduledDate.getTime() - 15 * 60 * 1000); // 15 min before
+  const callWindowEnd = new Date(scheduledDate.getTime() + 30 * 60 * 1000); // 30 min after
+  const canStartCall = now >= callWindowStart && now <= callWindowEnd;
+  const isTooEarly = now < callWindowStart;
+  const isTooLate = now > callWindowEnd;
+  
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
@@ -73,21 +92,18 @@ function AppointmentDetailModal({ apt, onClose, onStart }) {
         <div className="space-y-4">
           <div className="flex items-center gap-4 p-4 bg-[#f0fafa] rounded-xl">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#0D7377] to-[#14A085] flex items-center justify-center text-white font-black text-xl shadow-lg">
-              {apt.patient[0]}
+              {apt.patient?.full_name?.[0] || 'P'}
             </div>
             <div>
-              <p className="font-bold text-gray-800 text-lg">{apt.patient}</p>
-              <p className="text-sm text-gray-500">
-                {apt.age} yrs · {apt.gender}
-              </p>
+              <p className="font-bold text-gray-800 text-lg">{apt.patient?.full_name || 'Patient'}</p>
+              <p className="text-sm text-gray-500">{apt.patient?.email || ''}</p>
             </div>
           </div>
           {[
-            { label: "Appointment ID", value: apt.id, icon: "tag" },
-            { label: "Type", value: apt.type, icon: "medical_services" },
-            { label: "Date", value: apt.date, icon: "calendar_today" },
-            { label: "Time", value: apt.time, icon: "schedule" },
-            { label: "Duration", value: apt.duration, icon: "timer" },
+            { label: "Appointment ID", value: apt._id?.slice(-8) || 'N/A', icon: "tag" },
+            { label: "Date", value: dateStr, icon: "calendar_today" },
+            { label: "Time", value: timeStr, icon: "schedule" },
+            { label: "Consultation Fee", value: `${apt.payment?.amount || 0} ETB`, icon: "payments" },
           ].map((row) => (
             <div
               key={row.label}
@@ -105,13 +121,23 @@ function AppointmentDetailModal({ apt, onClose, onStart }) {
             </div>
           ))}
           <div className="flex items-center justify-between py-2">
-            <span className="text-gray-500 text-sm">Status</span>
+            <span className="text-gray-500 text-sm">Appointment Status</span>
             <span
               className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${statusColors[apt.status]}`}
             >
               {apt.status.replace("_", " ")}
             </span>
           </div>
+          {apt.payment && (
+            <div className="flex items-center justify-between py-2">
+              <span className="text-gray-500 text-sm">Payment Status</span>
+              <span
+                className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${paymentStatusColors[apt.payment.status] || 'bg-gray-100 text-gray-700'}`}
+              >
+                {apt.payment.status === 'paid' ? 'Paid' : apt.payment.status === 'awaiting_verification' ? 'Pending' : apt.payment.status}
+              </span>
+            </div>
+          )}
         </div>
         <div className="flex gap-3 mt-6">
           <button
@@ -120,12 +146,24 @@ function AppointmentDetailModal({ apt, onClose, onStart }) {
           >
             Close
           </button>
-          {apt.status === "upcoming" && (
+          {apt.status === "upcoming" && apt.payment?.status === 'paid' && (
             <button
-              onClick={() => onStart(apt)}
-              className="flex-1 px-4 py-3 bg-gradient-to-r from-[#0D7377] to-[#14A085] text-white rounded-xl font-bold text-sm hover:shadow-lg transition-all"
+              onClick={() => canStartCall && onStart(apt)}
+              disabled={!canStartCall}
+              className={`flex-1 px-4 py-3 text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
+                canStartCall
+                  ? 'bg-gradient-to-r from-[#0D7377] to-[#14A085] hover:shadow-lg'
+                  : 'bg-gray-400 cursor-not-allowed'
+              }`}
             >
-              Start Consultation
+              <span className="material-symbols-outlined text-sm">
+                {canStartCall ? 'videocam' : isTooEarly ? 'schedule' : 'event_busy'}
+              </span>
+              {canStartCall
+                ? 'Start Consultation'
+                : isTooEarly
+                ? `Available at ${callWindowStart.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`
+                : 'Call Window Expired'}
             </button>
           )}
         </div>
@@ -144,11 +182,17 @@ export default function DoctorAppointments() {
   const [toast, setToast] = useState(null);
 
   useEffect(() => {
-    setTimeout(() => {
-      setAppointments(mockDoctorAppointments);
-      setLoading(false);
-    }, 400);
+    fetchAppointments();
   }, []);
+
+  const fetchAppointments = async () => {
+    setLoading(true);
+    const result = await getDoctorAppointments();
+    if (result.data) {
+      setAppointments(result.data);
+    }
+    setLoading(false);
+  };
 
   if (loading)
     return (
@@ -173,22 +217,60 @@ export default function DoctorAppointments() {
   const confirmCancel = () => {
     const apt = confirmModal.apt;
     setAppointments((prev) =>
-      prev.map((a) => (a.id === apt.id ? { ...a, status: "cancelled" } : a)),
+      prev.map((a) => (a._id === apt._id ? { ...a, status: "cancelled" } : a)),
     );
     setConfirmModal(null);
-    showToast(`Appointment ${apt.id} has been cancelled.`, "error");
+    showToast(`Appointment ${apt._id?.slice(-8) || 'N/A'} has been cancelled.`, "error");
   };
 
-  const handleStart = (apt) => {
-    setDetailModal(null);
-    navigate(`/consultation/${apt.id}`, {
-      state: {
-        role: "doctor",
-        appointmentId: apt.id,
-        patientName: apt.patient,
-        doctorName: "Dr. " + apt.patient, // will be replaced with real doctor name from auth
-      },
-    });
+  const handleStart = async (apt) => {
+    try {
+      const token = localStorage.getItem("token");
+
+      // Verify appointment eligibility via backend
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/appointments/${apt._id}/verify-call`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: "Call verification failed" }));
+        showToast(errorData.message || "Unable to start consultation at this time.", "error");
+        return;
+      }
+
+      const data = await res.json();
+
+      if (data.eligible) {
+        // Notify patient that doctor has started the call
+        if (window.doctorStartCall && apt.patient?._id) {
+          window.doctorStartCall(apt._id, apt.patient._id, apt.patient?.full_name || "Patient");
+        }
+
+        setDetailModal(null);
+        navigate(`/consultation/${apt.video_room_id || apt._id}`, {
+          state: {
+            role: "doctor",
+            appointmentId: apt._id,
+            patientId: apt.patient?._id,
+            doctorName: "Doctor",
+            patientName: apt.patient?.full_name || "Patient",
+            scheduledAt: apt.scheduled_at,
+          },
+        });
+      } else {
+        showToast(data.message || "Consultation is not available at this time.", "error");
+      }
+    } catch (error) {
+      console.error("Start consultation error:", error);
+      showToast("Failed to start consultation. Please try again.", "error");
+    }
   };
 
   return (
@@ -203,7 +285,7 @@ export default function DoctorAppointments() {
       {confirmModal && (
         <ConfirmModal
           title="Cancel Appointment"
-          message={`Cancel appointment ${confirmModal.apt.id} with ${confirmModal.apt.patient}? This cannot be undone.`}
+          message={`Cancel appointment ${confirmModal.apt._id?.slice(-8) || 'N/A'} with ${confirmModal.apt.patient?.full_name || 'Patient'}? This cannot be undone.`}
           confirmLabel="Cancel Appointment"
           onConfirm={confirmCancel}
           onCancel={() => setConfirmModal(null)}
@@ -299,32 +381,44 @@ export default function DoctorAppointments() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 text-sm">
-              {filtered.map((apt) => (
+              {filtered.map((apt) => {
+            const scheduledDate = new Date(apt.scheduled_at);
+            const dateStr = scheduledDate.toLocaleDateString();
+            const timeStr = scheduledDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            return (
                 <tr
-                  key={apt.id}
+                  key={apt._id}
                   className="hover:bg-teal-50/20 transition-colors"
                 >
                   <td className="px-6 py-4 font-mono text-xs text-gray-400">
-                    {apt.id}
+                    {apt._id?.slice(-8) || 'N/A'}
                   </td>
                   <td className="px-6 py-4">
-                    <p className="font-bold text-gray-800">{apt.patient}</p>
-                    <p className="text-xs text-gray-400">
-                      {apt.age} yrs · {apt.gender}
-                    </p>
+                    <p className="font-bold text-gray-800">{apt.patient?.full_name || 'Patient'}</p>
+                    <p className="text-xs text-gray-400">{apt.patient?.email || ''}</p>
                   </td>
-                  <td className="px-6 py-4 text-gray-500">{apt.type}</td>
+                  <td className="px-6 py-4 text-gray-500">Video Call</td>
                   <td className="px-6 py-4">
-                    <p className="font-semibold text-gray-700">{apt.date}</p>
-                    <p className="text-xs text-gray-400">{apt.time}</p>
+                    <p className="font-semibold text-gray-700">{dateStr}</p>
+                    <p className="text-xs text-gray-400">{timeStr}</p>
                   </td>
-                  <td className="px-6 py-4 text-gray-400">{apt.duration}</td>
+                  <td className="px-6 py-4 text-gray-400">{apt.payment?.amount || 0} ETB</td>
                   <td className="px-6 py-4">
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${statusColors[apt.status]}`}
-                    >
-                      {apt.status.replace("_", " ")}
-                    </span>
+                    <div className="flex flex-col gap-1">
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider w-fit ${statusColors[apt.status]}`}
+                      >
+                        {apt.status.replace("_", " ")}
+                      </span>
+                      {apt.payment && (
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider w-fit ${paymentStatusColors[apt.payment.status] || 'bg-gray-100 text-gray-700'}`}
+                        >
+                          {apt.payment.status === 'paid' ? 'Paid' : apt.payment.status === 'awaiting_verification' ? 'Pending' : apt.payment.status}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
@@ -337,16 +431,10 @@ export default function DoctorAppointments() {
                           visibility
                         </span>
                       </button>
-                      {apt.status === "upcoming" && (
+                      {apt.status === "upcoming" && apt.payment?.status === 'paid' && (
                         <>
                           <button
-                            onClick={() => navigate(`/consultation/${apt.id}`, {
-                              state: {
-                                role: "doctor",
-                                appointmentId: apt.id,
-                                patientName: apt.patient,
-                              },
-                            })}
+                            onClick={() => handleStart(apt)}
                             className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                             title="Start consultation"
                           >
@@ -368,7 +456,7 @@ export default function DoctorAppointments() {
                     </div>
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         </div>

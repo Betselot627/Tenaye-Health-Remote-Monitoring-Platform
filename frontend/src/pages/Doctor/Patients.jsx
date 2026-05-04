@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import DoctorLayout from "./components/DoctorLayout";
-import { mockPatients } from "./data/mockData";
+import { getDoctorPatients } from "../../services/patientService";
 
 const statusColors = {
   active: "bg-blue-100 text-blue-700",
@@ -272,10 +272,30 @@ export default function DoctorPatients() {
   const [selected, setSelected] = useState(null);
 
   useEffect(() => {
-    setTimeout(() => {
-      setPatients(mockPatients);
+    const fetchPatients = async () => {
+      const result = await getDoctorPatients();
+      if (result.data) {
+        // Transform API data to match UI format
+        const transformed = result.data.map((p) => ({
+          id: p._id,
+          name: p.full_name,
+          email: p.email,
+          age: p.date_of_birth ? Math.floor((new Date() - new Date(p.date_of_birth)) / (365.25 * 24 * 60 * 60 * 1000)) : "N/A",
+          gender: p.gender || "Unknown",
+          bloodType: p.blood_type || "Unknown",
+          status: "stable", // Default, can be updated based on health data
+          lastVisit: p.lastVisit ? new Date(p.lastVisit).toLocaleDateString() : "N/A",
+          condition: "Patient", // Would need health records for this
+          phone: "N/A", // Not in current model
+          notes: "No clinical notes recorded.",
+          prescriptions: [],
+          labOrders: [],
+        }));
+        setPatients(transformed);
+      }
       setLoading(false);
-    }, 400);
+    };
+    fetchPatients();
   }, []);
 
   const filtered = patients.filter((p) => {

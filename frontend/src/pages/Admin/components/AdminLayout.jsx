@@ -29,6 +29,12 @@ export default function AdminLayout({ children, title }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState(mockNotifications);
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/login");
+  };
+
   // Close sidebar on route change (mobile)
   useEffect(() => {
     setSidebarOpen(false);
@@ -83,7 +89,7 @@ export default function AdminLayout({ children, title }) {
         `}
       >
         {/* Logo + close button (close only visible on mobile) */}
-        <div className="px-6 py-6 flex items-center gap-3 flex-shrink-0">
+        <div className="px-6 py-6 flex items-center gap-3 shrink-0">
           <div className="w-10 h-10 bg-[#7B2D8B] rounded-xl flex items-center justify-center">
             <span className="material-symbols-outlined text-white text-lg">favorite</span>
           </div>
@@ -123,14 +129,21 @@ export default function AdminLayout({ children, title }) {
         </nav>
 
         {/* Admin Profile — always visible at bottom */}
-        <div className="flex-shrink-0 mx-4 mb-6 p-4 bg-[#fdf0f9] rounded-2xl flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-[#7B2D8B] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+        <div className="shrink-0 mx-4 mb-6 p-4 bg-[#fdf0f9] rounded-2xl flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-[#7B2D8B] flex items-center justify-center text-white font-bold text-sm shrink-0">
             A
           </div>
-          <div className="overflow-hidden">
+          <div className="overflow-hidden flex-1 min-w-0">
             <p className="font-bold text-sm text-gray-800 truncate">Admin User</p>
             <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">System Administrator</p>
           </div>
+          <button
+            onClick={handleLogout}
+            title="Logout"
+            className="p-2 rounded-xl bg-white text-rose-600 hover:bg-rose-50 transition-colors shrink-0"
+          >
+            <span className="material-symbols-outlined text-lg">logout</span>
+          </button>
         </div>
       </aside>
 
@@ -142,7 +155,7 @@ export default function AdminLayout({ children, title }) {
 
           {/* Burger button */}
           <button
-            className="p-2 rounded-xl hover:bg-purple-50 text-gray-600 transition-colors lg:hidden flex-shrink-0"
+            className="p-2 rounded-xl hover:bg-purple-50 text-gray-600 transition-colors lg:hidden shrink-0"
             onClick={() => setSidebarOpen(true)}
             aria-label="Open sidebar"
           >
@@ -152,6 +165,14 @@ export default function AdminLayout({ children, title }) {
           <h2 className="text-base md:text-lg font-bold text-[#7B2D8B] flex-1 truncate">{title}</h2>
 
           <div className="flex items-center gap-2 md:gap-4">
+            <Link
+              to="/doctor-apply"
+              className="hidden md:flex items-center gap-2 px-4 py-2 rounded-full border border-[#7B2D8B]/20 bg-[#fdf0f9] text-[#7B2D8B] text-sm font-semibold hover:bg-[#f7edf5] transition-colors"
+            >
+              <span className="material-symbols-outlined text-sm">medical_services</span>
+              Apply for Doctor
+            </Link>
+
             {/* Search — hidden on small screens */}
             <form onSubmit={handleSearch} className="relative hidden md:block">
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none">search</span>
@@ -168,7 +189,7 @@ export default function AdminLayout({ children, title }) {
             <div className="relative">
               <button 
                 onClick={() => setShowNotifications(!showNotifications)}
-                className="relative p-2 rounded-full hover:bg-purple-50 transition-colors flex-shrink-0"
+                className="relative p-2 rounded-full hover:bg-purple-50 transition-colors shrink-0"
               >
                 <span className="material-symbols-outlined text-gray-500">notifications</span>
                 {unreadCount > 0 && (
@@ -227,7 +248,7 @@ export default function AdminLayout({ children, title }) {
                             }`}
                           >
                             <div className="flex items-start gap-3">
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
                                 notif.type === "alert" ? "bg-red-100" :
                                 notif.type === "doctor" ? "bg-purple-100" :
                                 notif.type === "payment" ? "bg-emerald-100" :
@@ -251,7 +272,7 @@ export default function AdminLayout({ children, title }) {
                                 <p className="text-xs text-gray-400 mt-1">{notif.time}</p>
                               </div>
                               {notif.unread && (
-                                <span className="w-2 h-2 bg-[#7B2D8B] rounded-full flex-shrink-0 mt-2"></span>
+                                <span className="w-2 h-2 bg-[#7B2D8B] rounded-full shrink-0 mt-2"></span>
                               )}
                             </div>
                           </div>

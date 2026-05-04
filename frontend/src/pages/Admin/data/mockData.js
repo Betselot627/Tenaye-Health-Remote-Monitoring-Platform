@@ -178,7 +178,7 @@ export const mockBlogs = [
  *   patient: string,   // patient full name — backend: join from users table
  *   doctor:  string,   // doctor full name — backend: join from doctors table
  *   amount:  number,   // amount in ETB
- *   gateway: "chapa" | "telebirr",
+ *   gateway: "chapa" | "receipt_upload",
  *   date:    string,   // ISO date string "YYYY-MM-DD"
  *   status:  "paid" | "pending" | "failed" | "refunded",
  * }
@@ -189,9 +189,9 @@ export const mockBlogs = [
  */
 export const mockPayments = [
   { id: "TXN-001", patient: "Bereket Tadesse", doctor: "Dr. Alem Bekele", amount: 500, gateway: "chapa", date: "2025-04-26", status: "paid" },
-  { id: "TXN-002", patient: "Sara Haile", doctor: "Dr. Tigist Worku", amount: 600, gateway: "telebirr", date: "2025-04-25", status: "paid" },
+  { id: "TXN-002", patient: "Sara Haile", doctor: "Dr. Tigist Worku", amount: 600, gateway: "receipt_upload", date: "2025-04-25", status: "paid" },
   { id: "TXN-003", patient: "Yonas Bekele", doctor: "Dr. Michael Chen", amount: 700, gateway: "chapa", date: "2025-04-25", status: "pending" },
-  { id: "TXN-004", patient: "Tigist Worku", doctor: "Dr. Sara Jenkins", amount: 400, gateway: "telebirr", date: "2025-04-24", status: "failed" },
+  { id: "TXN-004", patient: "Tigist Worku", doctor: "Dr. Sara Jenkins", amount: 400, gateway: "receipt_upload", date: "2025-04-24", status: "failed" },
   { id: "TXN-005", patient: "Abebe Girma", doctor: "Dr. Robert Kovac", amount: 550, gateway: "chapa", date: "2025-04-24", status: "refunded" },
 ];
 

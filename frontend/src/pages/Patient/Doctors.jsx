@@ -1,7 +1,6 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import PatientLayout from "./components/PatientLayout";
-import { mockDoctors } from "./data/mockData";
+import { getDoctors, getDoctorById, createAppointment, initiatePayment, uploadReceipt, verifyChapaPayment, getDoctorBookedSlots } from "../../services/patientService";
 
 const specialties = [
   "All",
@@ -18,90 +17,284 @@ const statusColors = {
   busy: "bg-amber-100 text-amber-700",
 };
 
-// ─── Step indicator ────────────────────────────────────────────────────────────
-function StepIndicator({ step }) {
-  const steps = ["Profile", "Schedule", "Payment"];
-  return (
-    <div className="flex items-center gap-1 mt-4">
-      {steps.map((label, i) => {
-        const num = i + 1;
-        const active = step === num;
-        const done = step > num;
-        return (
-          <div key={label} className="flex items-center gap-1">
-            <div
-              className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black transition-all
-                ${done ? "bg-emerald-500 text-white" : active ? "bg-white text-[#7B2D8B]" : "bg-white/30 text-white/60"}`}
-            >
-              {done ? (
-                <span className="material-symbols-outlined text-xs">check</span>
-              ) : (
-                num
-              )}
-            </div>
-            <span
-              className={`text-[10px] font-bold transition-all ${active ? "text-white" : done ? "text-emerald-300" : "text-white/50"}`}
-            >
-              {label}
-            </span>
-            {i < steps.length - 1 && (
-              <div
-                className={`w-6 h-px mx-1 ${done ? "bg-emerald-400" : "bg-white/20"}`}
-              />
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ─── Doctor booking modal ──────────────────────────────────────────────────────
-function DoctorModal({ doctor, onClose }) {
-  // step: 1 = profile, 2 = date/time, 3 = payment, 4 = success
-  const [step, setStep] = useState(1);
+function DoctorModal({ doctor: initialDoctor, onClose, onBookingSuccess }) {
+  const [showBooking, setShowBooking] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
+  const [booked, setBooked] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("");
-  const [paying, setPaying] = useState(false);
-  const navigate = useNavigate();
+  const [receiptFile, setReceiptFile] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [payment, setPayment] = useState(null);
+  const [appointment, setAppointment] = useState(null);
+  const [doctor, setDoctor] = useState(initialDoctor);
+  const [availableSlots, setAvailableSlots] = useState([]);
 
-  const times = [
-    "09:00 AM", "10:00 AM", "11:00 AM",
-    "02:00 PM", "03:00 PM", "04:00 PM",
-  ];
+  // Fetch full doctor details including availability when modal opens
+  useEffect(() => {
+    const fetchDoctorDetails = async () => {
+      const doctorId = initialDoctor._id || initialDoctor.id;
+      if (doctorId) {
+        const result = await getDoctorById(doctorId);
+        if (result.data) {
+          setDoctor(result.data);
+        }
+      }
+    };
+    fetchDoctorDetails();
+  }, [initialDoctor]);
 
-  // Simulate payment processing → redirect to success page
-  const handlePay = () => {
-    if (!paymentMethod) return;
-    setPaying(true);
-    // In production: call backend to initiate Chapa/TeleBirr, get redirect URL
-    // For now: simulate 1.5s processing then navigate to success page
-    setTimeout(() => {
-      setPaying(false);
-      onClose();
-      navigate("/payment/success", {
-        state: {
-          doctor: doctor.name,
-          specialty: doctor.specialty,
-          date: selectedDate,
-          time: selectedTime,
-          amount: doctor.fee,
-          method: paymentMethod,
-          receipt: `RCP-${Date.now()}`,
-        },
+  // Get available time slots based on selected date and doctor's availability
+  // Also checks for already booked slots to prevent double-booking
+  // Includes real-time polling every 5 seconds and refresh on window focus
+  useEffect(() => {
+    let intervalId;
+
+    const fetchAvailableSlots = async () => {
+      // Must have both date and availability data
+      if (!selectedDate || !doctor.availability || doctor.availability.length === 0) {
+        setAvailableSlots([]);
+        return;
+      }
+
+      // Parse date manually to avoid timezone issues
+      const [year, month, day] = selectedDate.split('-').map(Number);
+      const date = new Date(year, month - 1, day); // month is 0-indexed
+      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const dayName = dayNames[date.getDay()];
+
+      // Find availability for the selected day
+      const dayAvailability = doctor.availability.find(a => a.day === dayName);
+
+      if (!dayAvailability || !dayAvailability.slots || dayAvailability.slots.length === 0) {
+        setAvailableSlots([]);
+        setSelectedTime("");
+        return;
+      }
+
+      // Get already booked slots for this doctor on this date
+      const doctorId = doctor._id || doctor.id;
+      try {
+        const bookedResult = await getDoctorBookedSlots(doctorId, selectedDate);
+        const bookedSlots = bookedResult.data?.bookedSlots || [];
+
+        // Filter out already booked slots
+        const available = dayAvailability.slots.filter(slot => !bookedSlots.includes(slot));
+        setAvailableSlots(prev => {
+          // If currently selected time is now booked, deselect it
+          if (selectedTime && bookedSlots.includes(selectedTime)) {
+            setSelectedTime("");
+          }
+          return available;
+        });
+      } catch (err) {
+        // If booked slots API fails, show all available slots from doctor's schedule
+        setAvailableSlots(dayAvailability.slots);
+      }
+    };
+
+    // Initial fetch
+    fetchAvailableSlots();
+
+    // Set up polling every 5 seconds for real-time updates
+    intervalId = setInterval(fetchAvailableSlots, 5000);
+
+    // Refresh when window regains focus (user returns to tab)
+    const handleFocus = () => {
+      fetchAvailableSlots();
+    };
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [selectedDate, doctor.availability, doctor._id, doctor.id, selectedTime]);
+
+  const handleBook = async () => {
+    if (!selectedDate || !selectedTime) {
+      return;
+    }
+    
+    if (!paymentMethod) {
+      setError('Please select a payment method');
+      return;
+    }
+    
+    setLoading(true);
+    setError("");
+    
+    try {
+      // Create appointment - convert 12-hour time to 24-hour format
+      const convertTo24Hour = (time12h) => {
+        const [time, period] = time12h.split(' ');
+        let [hours, minutes] = time.split(':');
+        hours = parseInt(hours, 10);
+        if (period === 'PM' && hours !== 12) {
+          hours += 12;
+        } else if (period === 'AM' && hours === 12) {
+          hours = 0;
+        }
+        return { hours, minutes: parseInt(minutes, 10) };
+      };
+      
+      const { hours, minutes } = convertTo24Hour(selectedTime);
+      const [year, month, day] = selectedDate.split('-').map(Number);
+      
+      // Create date in local timezone (preserves the selected time)
+      const scheduledAt = new Date(year, month - 1, day, hours, minutes);
+      
+      console.log('Creating appointment:', {
+        doctor: doctor._id || doctor.id,
+        scheduled_at: scheduledAt.toISOString(),
+        localTime: selectedTime,
       });
-    }, 1500);
+      
+      const apptResult = await createAppointment({
+        doctor: doctor._id || doctor.id,
+        scheduled_at: scheduledAt.toISOString(),
+      });
+      
+      // Handle conflict - slot already booked
+      if (apptResult.error) {
+        if (apptResult.error.includes("already been booked") || apptResult.error.includes("409")) {
+          setError("This time slot was just booked by another patient. Please select a different time.");
+          // Refresh available slots immediately
+          const bookedResult = await getDoctorBookedSlots(doctor._id || doctor.id, selectedDate);
+          const bookedSlots = bookedResult.data?.bookedSlots || [];
+          const [y, m, d] = selectedDate.split('-').map(Number);
+          const date = new Date(y, m - 1, d);
+          const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+          const dayName = dayNames[date.getDay()];
+          const dayAvailability = doctor.availability.find(a => a.day === dayName);
+          if (dayAvailability && dayAvailability.slots) {
+            const available = dayAvailability.slots.filter(slot => !bookedSlots.includes(slot));
+            setAvailableSlots(available);
+            setSelectedTime("");
+          }
+          setLoading(false);
+          return;
+        }
+        throw new Error(apptResult.error);
+      }
+      
+      setAppointment(apptResult.data);
+      
+      // Initiate payment
+      const paymentResult = await initiatePayment({
+        doctor: doctor._id || doctor.id,
+        appointment: apptResult.data._id,
+        amount: doctor.consultation_fee || doctor.fee,
+        gateway: paymentMethod,
+      });
+      
+      if (paymentResult.error) {
+        setError(paymentResult.error);
+        setLoading(false);
+        return;
+      }
+      
+      setPayment(paymentResult.data.payment);
+      
+      // If Chapa, redirect to payment page
+      if (paymentMethod === 'chapa') {
+        const chapaUrl = paymentResult.data.checkout_url;
+        
+        if (!chapaUrl) {
+          setError('Failed to get Chapa checkout URL');
+          setLoading(false);
+          return;
+        }
+        
+        // Store payment info for verification after redirect
+        localStorage.setItem('pendingPayment', JSON.stringify({
+          paymentId: paymentResult.data.payment._id,
+          tx_ref: paymentResult.data.tx_ref,
+          appointmentId: apptResult.data._id,
+        }));
+        
+        // Redirect to Chapa checkout
+        console.log('Redirecting to:', chapaUrl);
+        window.location.href = chapaUrl;
+      } else {
+        // For receipt upload, show upload form
+        setShowPayment(true);
+      }
+      
+      setLoading(false);
+    } catch (err) {
+      console.error('handleBook error:', err);
+      setError(err.message || "Failed to book appointment");
+      setLoading(false);
+    }
   };
-
-  // Today's date string for min date on input
-  const today = new Date().toISOString().split("T")[0];
+  
+  const handleReceiptUpload = async () => {
+    if (!receiptFile) {
+      setError("Please select a receipt file");
+      return;
+    }
+    
+    setLoading(true);
+    setError("");
+    
+    try {
+      const result = await uploadReceipt(payment._id, receiptFile);
+      
+      if (result.error) {
+        setError(result.error);
+        setLoading(false);
+        return;
+      }
+      
+      setBooked(true);
+      setLoading(false);
+      
+      setTimeout(() => {
+        setBooked(false);
+        onBookingSuccess();
+        onClose();
+      }, 2000);
+    } catch (err) {
+      setError(err.message || "Failed to upload receipt");
+      setLoading(false);
+    }
+  };
+  
+  const handleVerifyChapaPayment = async () => {
+    setLoading(true);
+    setError("");
+    
+    try {
+      const result = await verifyChapaPayment(payment.tx_ref);
+      
+      if (result.error) {
+        setError(result.error);
+        setLoading(false);
+        return;
+      }
+      
+      setBooked(true);
+      setLoading(false);
+      
+      setTimeout(() => {
+        setBooked(false);
+        onBookingSuccess();
+        onClose();
+      }, 2000);
+    } catch (err) {
+      setError(err.message || "Failed to verify payment");
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-br from-[#7B2D8B] to-[#9d3fb0] p-6 text-white relative flex-shrink-0">
+        <div className="bg-gradient-to-br from-[#E05C8A] to-[#F4845F] p-6 text-white relative flex-shrink-0">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition-colors"
@@ -111,43 +304,134 @@ function DoctorModal({ doctor, onClose }) {
             </span>
           </button>
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0">
-              <span className="material-symbols-outlined text-white text-3xl">person</span>
+            <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center">
+              <span className="material-symbols-outlined text-white text-3xl">
+                person
+              </span>
             </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-black text-xl truncate">{doctor.name}</h3>
-              <p className="text-white/80 text-sm">{doctor.specialty} · {doctor.subSpecialty}</p>
-              <div className="flex items-center gap-1 mt-1">
-                {[...Array(5)].map((_, i) => (
-                  <span
-                    key={i}
-                    className={`material-symbols-outlined text-xs ${i < Math.floor(doctor.rating) ? "text-yellow-300" : "text-white/30"}`}
-                    style={{ fontVariationSettings: "'FILL' 1" }}
-                  >star</span>
-                ))}
-                <span className="text-white/70 text-xs ml-1">{doctor.rating} ({doctor.totalReviews})</span>
+            <div>
+              <h3 className="font-black text-xl">{doctor.user?.full_name || doctor.name}</h3>
+              <p className="text-white/80 text-sm">
+                {doctor.specialty}
+              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-0.5">
+                  {[...Array(5)].map((_, i) => (
+                    <span
+                      key={i}
+                      className={`material-symbols-outlined text-sm ${i < Math.floor(doctor.rating) ? "text-yellow-300" : "text-white/30"}`}
+                      style={{ fontVariationSettings: "'FILL' 1" }}
+                    >
+                      star
+                    </span>
+                  ))}
+                </div>
+                <span className="text-white/80 text-xs">
+                  {doctor.rating} ({doctor.years_experience ? `${doctor.years_experience} yrs exp` : 'Experienced'})
+                </span>
               </div>
             </div>
           </div>
-          {step < 4 && <StepIndicator step={step} />}
         </div>
 
-        {/* ── Body ── */}
         <div className="overflow-y-auto flex-1 p-6 space-y-4">
-
-          {/* STEP 1 — Doctor profile */}
-          {step === 1 && (
+          {booked ? (
+            <div className="text-center py-8">
+              <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-3">
+                <span className="material-symbols-outlined text-emerald-600 text-3xl">
+                  check_circle
+                </span>
+              </div>
+              <p className="font-black text-gray-800 text-lg">
+                Appointment Booked!
+              </p>
+              <p className="text-gray-400 text-sm mt-1">
+                {selectedDate} at {selectedTime}
+              </p>
+            </div>
+          ) : showPayment ? (
+            <div className="space-y-4">
+              <h4 className="font-bold text-gray-800">Complete Payment</h4>
+              
+              {paymentMethod === 'receipt_upload' ? (
+                <div>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Upload your payment receipt to complete the booking.
+                  </p>
+                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center">
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={(e) => setReceiptFile(e.target.files[0])}
+                      className="hidden"
+                      id="receipt-upload"
+                    />
+                    <label
+                      htmlFor="receipt-upload"
+                      className="cursor-pointer block"
+                    >
+                      <span className="material-symbols-outlined text-4xl text-gray-400">
+                        upload_file
+                      </span>
+                      <p className="text-sm text-gray-600 mt-2">
+                        {receiptFile ? receiptFile.name : "Click to upload receipt"}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        JPEG, PNG, or PDF (max 5MB)
+                      </p>
+                    </label>
+                  </div>
+                  {error && (
+                    <p className="text-red-500 text-xs mt-2">{error}</p>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Complete your payment via Chapa to confirm the booking.
+                  </p>
+                  <div className="p-3 bg-amber-50 rounded-xl border border-amber-100 text-xs text-amber-700 mb-3">
+                    <span className="font-bold">Transaction Reference:</span> {payment?.tx_ref}
+                  </div>
+                  <p className="text-xs text-gray-500 mb-3">
+                    After completing payment, click the button below to verify.
+                  </p>
+                  {error && (
+                    <p className="text-red-500 text-xs mb-2">{error}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : !showBooking ? (
             <>
-              <p className="text-sm text-gray-600 leading-relaxed">{doctor.bio}</p>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                {doctor.bio || "Experienced healthcare professional dedicated to providing quality patient care."}
+              </p>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { icon: "work_history", label: "Experience", value: doctor.experience },
-                  { icon: "payments", label: "Consultation Fee", value: `${doctor.fee} ETB` },
-                  { icon: "local_hospital", label: "Hospital", value: doctor.hospital },
-                  { icon: "schedule", label: "Availability", value: doctor.availability },
+                  {
+                    icon: "work_history",
+                    label: "Experience",
+                    value: doctor.years_experience ? `${doctor.years_experience} Years` : 'Experienced',
+                  },
+                  {
+                    icon: "payments",
+                    label: "Consultation Fee",
+                    value: `${doctor.consultation_fee || doctor.fee} ETB`,
+                  },
+                  {
+                    icon: "local_hospital",
+                    label: "Hospital",
+                    value: doctor.hospital || 'Available',
+                  },
+                  {
+                    icon: "verified",
+                    label: "Status",
+                    value: doctor.is_verified ? 'Verified' : 'Pending',
+                  },
                 ].map(({ icon, label, value }) => (
-                  <div key={label} className="p-3 bg-[#fdf0f9]/40 rounded-xl">
-                    <span className="material-symbols-outlined text-[#7B2D8B] text-lg">
+                  <div key={label} className="p-3 bg-[#fff5f7]/40 rounded-xl">
+                    <span className="material-symbols-outlined text-[#E05C8A] text-lg">
                       {icon}
                     </span>
                     <p className="text-xs text-gray-400 mt-1">{label}</p>
@@ -155,216 +439,144 @@ function DoctorModal({ doctor, onClose }) {
                   </div>
                 ))}
               </div>
-              <div className="p-3 bg-[#fdf0f9]/40 rounded-xl">
-                <p className="text-xs text-gray-400 mb-1">Languages</p>
-                <div className="flex gap-2 flex-wrap">
-                  {doctor.languages.map((l) => (
-                    <span
-                      key={l}
-                      className="text-xs font-semibold px-2.5 py-1 bg-purple-100 text-[#7B2D8B] rounded-full"
-                    >
-                      {l}
-                    </span>
-                  ))}
-                </div>
-              </div>
             </>
-          )}
-
-          {/* STEP 2 — Date & time */}
-          {step === 2 && (
-            <div className="space-y-5">
+          ) : (
+            <div className="space-y-4">
+              <h4 className="font-bold text-gray-800">Select Date & Time</h4>
               <div>
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
-                  Select Date
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                  Date
                 </label>
                 <input
                   type="date"
-                  min={today}
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full mt-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#7B2D8B] focus:ring-2 focus:ring-purple-100"
+                  className="w-full mt-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#E05C8A] focus:ring-2 focus:ring-rose-100"
                 />
               </div>
               <div>
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
-                  Select Time Slot
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                  Time Slot
                 </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {times.map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setSelectedTime(t)}
-                      className={`py-2 text-xs font-bold rounded-xl border transition-all ${selectedTime === t ? "bg-gradient-to-r from-[#7B2D8B] to-[#9d3fb0] text-white border-transparent shadow-lg" : "border-gray-200 text-gray-600 hover:border-purple-300 hover:text-[#7B2D8B]"}`}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {selectedDate && selectedTime && (
-                <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center gap-2">
-                  <span className="material-symbols-outlined text-emerald-600 text-lg">event_available</span>
-                  <p className="text-sm font-semibold text-emerald-700">
-                    {selectedDate} at {selectedTime}
+                {!selectedDate ? (
+                  <p className="text-sm text-gray-400 mt-2">Please select a date first</p>
+                ) : availableSlots.length === 0 ? (
+                  <p className="text-sm text-amber-600 mt-2">
+                    {(() => {
+                      const [y, m, d] = selectedDate.split('-').map(Number);
+                      const dt = new Date(y, m - 1, d);
+                      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                      return doctor.availability?.find(a => a.day === days[dt.getDay()])?.slots?.length > 0;
+                    })()
+                      ? "All slots are already booked for this day"
+                      : "No available slots for this day"}
                   </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* STEP 3 — Payment */}
-          {step === 3 && (
-            <div className="space-y-5">
-              {/* Appointment summary */}
-              <div className="bg-[#fdf0f9] rounded-2xl p-4 border border-purple-100">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Appointment Summary</p>
-                <div className="space-y-2">
-                  {[
-                    { icon: "person", label: "Doctor", value: doctor.name },
-                    { icon: "stethoscope", label: "Specialty", value: doctor.specialty },
-                    { icon: "calendar_today", label: "Date", value: selectedDate },
-                    { icon: "schedule", label: "Time", value: selectedTime },
-                  ].map(({ icon, label, value }) => (
-                    <div key={label} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-gray-500 text-xs">
-                        <span className="material-symbols-outlined text-sm text-[#7B2D8B]">{icon}</span>
-                        {label}
-                      </div>
-                      <span className="text-xs font-bold text-gray-800">{value}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-3 pt-3 border-t border-purple-100 flex items-center justify-between">
-                  <span className="text-sm font-black text-gray-700">Total Amount</span>
-                  <span className="text-2xl font-black text-[#7B2D8B]">{doctor.fee} ETB</span>
-                </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2 mt-1">
+                    {availableSlots.map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => setSelectedTime(t)}
+                        className={`py-2 text-xs font-bold rounded-xl border transition-all ${selectedTime === t ? "bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white border-transparent shadow-lg" : "border-gray-200 text-gray-600 hover:border-rose-300 hover:text-[#E05C8A]"}`}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-
-              {/* Payment method selection */}
+              <div className="p-3 bg-amber-50 rounded-xl border border-amber-100 text-xs text-amber-700">
+                <span className="font-bold">Fee: {doctor.consultation_fee || doctor.fee} ETB</span>
+              </div>
+              
               <div>
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Choose Payment Method</p>
-                <div className="grid grid-cols-2 gap-3">
-                  {/* Chapa */}
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                  Payment Method
+                </label>
+                <div className="grid grid-cols-2 gap-2 mt-1">
                   <button
-                    onClick={() => setPaymentMethod("Chapa")}
-                    className={`relative p-4 rounded-2xl border-2 transition-all text-left ${
-                      paymentMethod === "Chapa"
-                        ? "border-[#7B2D8B] bg-[#fdf0f9] shadow-lg shadow-purple-100"
-                        : "border-gray-200 hover:border-purple-200 hover:bg-purple-50/30"
-                    }`}
+                    type="button"
+                    onClick={() => setPaymentMethod('chapa')}
+                    className={`py-2 text-xs font-bold rounded-xl border transition-all ${paymentMethod === 'chapa' ? 'bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white border-transparent' : 'border-gray-200 text-gray-600 hover:border-rose-300'}`}
                   >
-                    {paymentMethod === "Chapa" && (
-                      <span className="absolute top-2 right-2 w-5 h-5 bg-[#7B2D8B] rounded-full flex items-center justify-center">
-                        <span className="material-symbols-outlined text-white text-xs">check</span>
-                      </span>
-                    )}
-                    <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center mb-2">
-                      <span className="material-symbols-outlined text-green-600 text-xl">credit_card</span>
-                    </div>
-                    <p className="text-sm font-black text-gray-800">Chapa</p>
-                    <p className="text-xs text-gray-400 mt-0.5">Card / Bank Transfer</p>
+                    Chapa (Online)
                   </button>
-
-                  {/* TeleBirr */}
                   <button
-                    onClick={() => setPaymentMethod("TeleBirr")}
-                    className={`relative p-4 rounded-2xl border-2 transition-all text-left ${
-                      paymentMethod === "TeleBirr"
-                        ? "border-[#7B2D8B] bg-[#fdf0f9] shadow-lg shadow-purple-100"
-                        : "border-gray-200 hover:border-purple-200 hover:bg-purple-50/30"
-                    }`}
+                    type="button"
+                    onClick={() => setPaymentMethod('receipt_upload')}
+                    className={`py-2 text-xs font-bold rounded-xl border transition-all ${paymentMethod === 'receipt_upload' ? 'bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white border-transparent' : 'border-gray-200 text-gray-600 hover:border-rose-300'}`}
                   >
-                    {paymentMethod === "TeleBirr" && (
-                      <span className="absolute top-2 right-2 w-5 h-5 bg-[#7B2D8B] rounded-full flex items-center justify-center">
-                        <span className="material-symbols-outlined text-white text-xs">check</span>
-                      </span>
-                    )}
-                    <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center mb-2">
-                      <span className="material-symbols-outlined text-blue-600 text-xl">phone_android</span>
-                    </div>
-                    <p className="text-sm font-black text-gray-800">TeleBirr</p>
-                    <p className="text-xs text-gray-400 mt-0.5">Mobile Money</p>
+                    Upload Receipt
                   </button>
                 </div>
-              </div>
-
-              {/* Security note */}
-              <div className="flex items-center gap-2 text-xs text-gray-400">
-                <span className="material-symbols-outlined text-sm text-emerald-500">lock</span>
-                Payments are processed securely. Your card details are never stored.
               </div>
             </div>
           )}
         </div>
 
-        {/* ── Footer buttons ── */}
         <div className="p-6 border-t border-gray-100 flex gap-3 flex-shrink-0">
-          {step === 1 && (
+          {!showBooking && !showPayment ? (
             <>
               <button
-                onClick={() => setStep(2)}
-                disabled={doctor.status === "busy"}
-                className="flex-1 py-2.5 bg-gradient-to-r from-[#7B2D8B] to-[#9d3fb0] text-white text-sm font-bold rounded-xl hover:scale-105 transition-all shadow-lg shadow-purple-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                onClick={() => setShowBooking(true)}
+                disabled={doctor.status === "suspended"}
+                className="flex-1 py-2.5 bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white text-sm font-bold rounded-xl hover:scale-105 transition-all shadow-lg shadow-rose-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
-                {doctor.status === "busy" ? "Currently Busy" : (
-                  <>
-                    Book Appointment
-                    <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                  </>
-                )}
+                {doctor.status === "suspended"
+                  ? "Currently Unavailable"
+                  : "Book Appointment"}
               </button>
               <button
                 onClick={onClose}
-                className="px-4 py-3 bg-gray-100 text-gray-600 text-sm font-bold rounded-xl hover:bg-gray-200 transition-all"
+                className="px-4 py-2.5 bg-gray-100 text-gray-600 text-sm font-bold rounded-xl hover:bg-gray-200 transition-all"
               >
                 Close
               </button>
             </>
-          )}
-
-          {step === 2 && (
+          ) : showBooking ? (
             <>
               <button
-                onClick={() => setStep(3)}
-                disabled={!selectedDate || !selectedTime}
-                className="flex-1 py-2.5 bg-gradient-to-r from-[#7B2D8B] to-[#9d3fb0] text-white text-sm font-bold rounded-xl hover:scale-105 transition-all shadow-lg shadow-purple-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                onClick={handleBook}
+                disabled={!selectedDate || !selectedTime || !paymentMethod || loading}
+                className="flex-1 py-2.5 bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white text-sm font-bold rounded-xl hover:scale-105 transition-all shadow-lg shadow-rose-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
-                Continue to Payment
-                <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                {loading ? "Processing..." : "Continue to Payment"}
               </button>
               <button
-                onClick={() => setStep(1)}
-                className="px-4 py-3 bg-gray-100 text-gray-600 text-sm font-bold rounded-xl hover:bg-gray-200 transition-all"
+                onClick={() => setShowBooking(false)}
+                disabled={loading}
+                className="px-4 py-2.5 bg-gray-100 text-gray-600 text-sm font-bold rounded-xl hover:bg-gray-200 transition-all disabled:opacity-50"
               >
                 Back
               </button>
             </>
-          )}
-
-          {step === 3 && (
+          ) : (
             <>
+              {paymentMethod === 'receipt_upload' ? (
+                <>
+                  <button
+                    onClick={handleReceiptUpload}
+                    disabled={!receiptFile || loading}
+                    className="flex-1 py-2.5 bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white text-sm font-bold rounded-xl hover:scale-105 transition-all shadow-lg shadow-rose-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                  >
+                    {loading ? "Uploading..." : "Submit Receipt"}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={handleVerifyChapaPayment}
+                    disabled={loading}
+                    className="flex-1 py-2.5 bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white text-sm font-bold rounded-xl hover:scale-105 transition-all shadow-lg shadow-rose-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                  >
+                    {loading ? "Verifying..." : "Verify Payment"}
+                  </button>
+                </>
+              )}
               <button
-                onClick={handlePay}
-                disabled={!paymentMethod || paying}
-                className="flex-1 py-3 bg-gradient-to-r from-[#7B2D8B] to-[#9d3fb0] text-white text-sm font-bold rounded-xl hover:scale-105 transition-all shadow-lg shadow-purple-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
-              >
-                {paying ? (
-                  <>
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <span className="material-symbols-outlined text-sm">payments</span>
-                    Pay {doctor.fee} ETB
-                  </>
-                )}
-              </button>
-              <button
-                onClick={() => setStep(2)}
-                disabled={paying}
-                className="px-4 py-3 bg-gray-100 text-gray-600 text-sm font-bold rounded-xl hover:bg-gray-200 transition-all disabled:opacity-50"
+                onClick={() => setShowPayment(false)}
+                disabled={loading}
+                className="px-4 py-2.5 bg-gray-100 text-gray-600 text-sm font-bold rounded-xl hover:bg-gray-200 transition-all disabled:opacity-50"
               >
                 Back
               </button>
@@ -377,16 +589,48 @@ function DoctorModal({ doctor, onClose }) {
 }
 
 export default function PatientDoctors() {
-  const [doctors] = useState(mockDoctors);
+  const [doctors, setDoctors] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [specialty, setSpecialty] = useState("All");
   const [selected, setSelected] = useState(null);
+  
+  useEffect(() => {
+    fetchDoctors();
+  }, []);
+  
+  const fetchDoctors = async () => {
+    setLoading(true);
+    const filters = {};
+    if (specialty !== "All") {
+      filters.specialty = specialty;
+    }
+    if (search) {
+      filters.search = search;
+    }
+    
+    const result = await getDoctors(filters);
+    if (result.data) {
+      setDoctors(result.data);
+    }
+    setLoading(false);
+  };
+  
+  useEffect(() => {
+    fetchDoctors();
+  }, [specialty, search]);
+  
+  const handleBookingSuccess = () => {
+    fetchDoctors();
+  };
 
   const filtered = doctors.filter((d) => {
+    const name = d.user?.full_name || d.name || "";
+    const doctorSpecialty = d.specialty || "";
     const matchSearch =
-      d.name.toLowerCase().includes(search.toLowerCase()) ||
-      d.specialty.toLowerCase().includes(search.toLowerCase());
-    const matchSpecialty = specialty === "All" || d.specialty === specialty;
+      name.toLowerCase().includes(search.toLowerCase()) ||
+      doctorSpecialty.toLowerCase().includes(search.toLowerCase());
+    const matchSpecialty = specialty === "All" || doctorSpecialty === specialty;
     return matchSearch && matchSpecialty;
   });
 
@@ -395,19 +639,23 @@ export default function PatientDoctors() {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h2 className="text-2xl font-black text-[#7B2D8B] flex items-center gap-2">
+          <h2 className="text-2xl font-black text-[#E05C8A] flex items-center gap-2">
             <span className="material-symbols-outlined text-3xl">
               medical_services
             </span>
             Find Doctors
           </h2>
-          <p className="text-gray-400 text-sm mt-0.5">{filtered.length} doctors available</p>
+          <p className="text-gray-400 text-sm mt-0.5">
+            {filtered.length} doctors available
+          </p>
         </div>
 
         {/* Search + filter */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xl">search</span>
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xl">
+              search
+            </span>
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -420,87 +668,110 @@ export default function PatientDoctors() {
             onChange={(e) => setSpecialty(e.target.value)}
             className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#E05C8A] bg-white text-gray-700 font-semibold"
           >
-            {specialties.map((s) => <option key={s}>{s}</option>)}
+            {specialties.map((s) => (
+              <option key={s}>{s}</option>
+            ))}
           </select>
         </div>
 
         {/* Doctor cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filtered.map((doc) => (
-            <div
-              key={doc.id}
-              className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-rose-200 transition-all duration-300 p-5 group"
-            >
-              <div className="flex items-start gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#fdf0f9] to-purple-100 flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm flex-shrink-0">
-                  <span className="material-symbols-outlined text-[#7B2D8B] text-2xl">
-                    person
-                  </span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-black text-gray-800">{doc.name}</p>
-                      <p className="text-xs text-gray-500">{doc.specialty}</p>
-                    </div>
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${statusColors[doc.status]}`}>
-                      {doc.status}
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#E05C8A]"></div>
+            <p className="text-gray-400 text-sm mt-3">Loading doctors...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {filtered.map((doc) => (
+              <div
+                key={doc._id || doc.id}
+                className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-rose-200 transition-all duration-300 p-5 group"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#fff5f7] to-rose-100 flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm flex-shrink-0">
+                    <span className="material-symbols-outlined text-[#E05C8A] text-2xl">
+                      person
                     </span>
                   </div>
-                  <div className="flex items-center gap-1 mt-1">
-                    {[...Array(5)].map((_, i) => (
-                      <span
-                        key={i}
-                        className={`material-symbols-outlined text-xs ${i < Math.floor(doc.rating) ? "text-yellow-400" : "text-gray-200"}`}
-                        style={{ fontVariationSettings: "'FILL' 1" }}
-                      >star</span>
-                    ))}
-                    <span className="text-xs text-gray-400 ml-1">{doc.rating} ({doc.totalReviews})</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-black text-gray-800">
+                          {doc.user?.full_name || doc.name}
+                        </p>
+                        <p className="text-xs text-gray-500">{doc.specialty}</p>
+                      </div>
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 bg-emerald-100 text-emerald-700">
+                        Verified
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 mt-1">
+                      {[...Array(5)].map((_, i) => (
+                        <span
+                          key={i}
+                          className={`material-symbols-outlined text-xs ${i < Math.floor(doc.rating) ? "text-yellow-400" : "text-gray-200"}`}
+                          style={{ fontVariationSettings: "'FILL' 1" }}
+                        >
+                          star
+                        </span>
+                      ))}
+                      <span className="text-xs text-gray-400 ml-1">
+                        {doc.rating} ({doc.years_experience ? `${doc.years_experience} yrs exp` : 'Experienced'})
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                <div className="flex items-center gap-1.5 text-gray-500">
-                  <span className="material-symbols-outlined text-sm text-[#7B2D8B]">
-                    work_history
-                  </span>
-                  {doc.experience}
+                <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                  <div className="flex items-center gap-1.5 text-gray-500">
+                    <span className="material-symbols-outlined text-sm text-[#E05C8A]">
+                      work_history
+                    </span>
+                    {doc.years_experience ? `${doc.years_experience} Years` : 'Experienced'}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-gray-500">
+                    <span className="material-symbols-outlined text-sm text-[#E05C8A]">
+                      payments
+                    </span>
+                    {doc.consultation_fee || doc.fee} ETB
+                  </div>
+                  <div className="flex items-center gap-1.5 text-gray-500 col-span-2 truncate">
+                    <span className="material-symbols-outlined text-sm text-[#E05C8A]">
+                      local_hospital
+                    </span>
+                    <span className="truncate">{doc.hospital || 'Available'}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5 text-gray-500">
-                  <span className="material-symbols-outlined text-sm text-[#7B2D8B]">
-                    payments
-                  </span>
-                  {doc.fee} ETB
-                </div>
-                <div className="flex items-center gap-1.5 text-gray-500 col-span-2 truncate">
-                  <span className="material-symbols-outlined text-sm text-[#7B2D8B]">
-                    local_hospital
-                  </span>
-                  <span className="truncate">{doc.hospital}</span>
-                </div>
-              </div>
 
-              <button
-                onClick={() => setSelected(doc)}
-                className="w-full mt-4 py-2.5 bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white text-xs font-bold rounded-xl hover:scale-[1.02] transition-all shadow-md shadow-rose-200"
-              >
-                View Profile & Book
-              </button>
-            </div>
-          ))}
-        </div>
+                <button
+                  onClick={() => setSelected(doc)}
+                  className="w-full mt-4 py-2.5 bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white text-xs font-bold rounded-xl hover:scale-[1.02] transition-all shadow-md shadow-rose-200"
+                >
+                  View Profile & Book
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {filtered.length === 0 && (
           <div className="bg-white rounded-2xl p-12 text-center border border-gray-100">
-            <span className="material-symbols-outlined text-5xl text-gray-200">medical_services</span>
-            <p className="text-gray-400 mt-3">No doctors found matching your search</p>
+            <span className="material-symbols-outlined text-5xl text-gray-200">
+              medical_services
+            </span>
+            <p className="text-gray-400 mt-3">
+              No doctors found matching your search
+            </p>
           </div>
         )}
       </div>
 
       {selected && (
-        <DoctorModal doctor={selected} onClose={() => setSelected(null)} />
+        <DoctorModal 
+          doctor={selected} 
+          onClose={() => setSelected(null)} 
+          onBookingSuccess={handleBookingSuccess}
+        />
       )}
     </PatientLayout>
   );

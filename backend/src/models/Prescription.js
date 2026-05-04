@@ -1,5 +1,13 @@
 import mongoose from "mongoose";
 
+const medicationSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  dosage: { type: String, required: true },
+  frequency: { type: String, required: true },
+  duration: { type: String, required: true },
+  instructions: { type: String },
+});
+
 const prescriptionSchema = new mongoose.Schema(
   {
     patient: {
@@ -12,10 +20,19 @@ const prescriptionSchema = new mongoose.Schema(
       ref: "Doctor",
       required: true,
     },
-    medication: { type: String, required: true },
-    dosage: { type: String },
-    duration: { type: String },
+    appointment: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Appointment",
+      required: true,
+    },
+    medications: [medicationSchema],
+    diagnosis: { type: String },
     notes: { type: String },
+    status: {
+      type: String,
+      enum: ["active", "completed", "cancelled"],
+      default: "active",
+    },
   },
   { timestamps: true },
 );

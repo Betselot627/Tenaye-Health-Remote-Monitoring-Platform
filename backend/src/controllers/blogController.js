@@ -33,6 +33,47 @@ export const createBlog = async (req, res) => {
   }
 };
 
+export const updateBlog = async (req, res) => {
+  try {
+    const blog = await Blog.findById(req.params.id);
+    if (!blog) return res.status(404).json({ message: "Blog not found" });
+    
+    // Only author or admin can update
+    if (blog.author.toString() !== req.user._id.toString() && req.user.role !== "admin") {
+      return res.status(403).json({ message: "Not authorized to update this blog" });
+    }
+    
+    const updated = await Blog.findByIdAndUpdate(
+      req.params.id,
+      { ...req.body },
+      { new: true }
+    );
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export const deleteBlog = async (req, res) => {
+  try {
+    const blog = await Blog.findById(req.params.id);
+    if (!blog) return res.status(404).json({ message: "Blog not found" });
+
+    // Only author or admin can delete
+    if (blog.author.toString() !== req.user._id.toString() && req.user.role !== "admin") {
+      return res.status(403).json({ message: "Not authorized to delete this blog" });
+    }
+
+    await Blog.findByIdAndDelete(req.params.id);
+    res.json({ message: "Blog deleted successfully" });
+  } catch (err) {
+    if (err.name === "CastError" && err.kind === "ObjectId") {
+      return res.status(400).json({ message: "Invalid blog ID format" });
+    }
+    res.status(500).json({ message: err.message });
+  }
+};
+
 export const toggleLike = async (req, res) => {
   try {
     const blog = await Blog.findById(req.params.id);

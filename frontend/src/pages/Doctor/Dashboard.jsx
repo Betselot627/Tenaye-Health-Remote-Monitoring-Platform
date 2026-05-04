@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+﻿import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import DoctorLayout from "./components/DoctorLayout";
 import {
@@ -9,6 +9,10 @@ import {
   mockWeeklyEarnings,
   mockMonthlyPatients,
 } from "./data/mockData";
+
+// Stream Video and Chat SDKs (loaded via CDN)
+const StreamVideo = window?.StreamVideo?.StreamVideoClient;
+const StreamChat = window?.StreamChat?.StreamChat;
 
 const statusColors = {
   upcoming: "bg-blue-100 text-blue-700",
@@ -114,6 +118,231 @@ export default function DoctorDashboard() {
   const [loading, setLoading] = useState(true);
   const [counters, setCounters] = useState({ patients: 0, appointmentsToday: 0, labOrders: 0, earnings: 0 });
 
+  // SOS Emergency State
+  const [sosAlert, setSosAlert] = useState(null);
+  const [inSOSCall, setInSOSCall] = useState(false);
+  const [sosCallId, setSosCallId] = useState(null);
+  const [sosPatientName, setSosPatientName] = useState("");
+  const [sosPatientId, setSosPatientId] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState("");
+  const videoContainerRef = useRef(null);
+  const chatContainerRef = useRef(null);
+  const socketRef = useRef(null);
+  const videoClientRef = useRef(null);
+  const chatClientRef = useRef(null);
+  const callRef = useRef(null);
+
+  // Initialize Socket.io connection and listen for SOS alerts
+  useEffect(() => {
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || "http://localhost:3001";
+    socketRef.current = window.io(socketUrl);
+
+    const userId = localStorage.getItem("userId");
+    const doctorId = localStorage.getItem("doctorId");
+
+    // Listen for SOS alerts directed to this doctor
+    if (doctorId) {
+      socketRef.current.on(`sos-alert-${doctorId}`, (data) => {
+        setSosAlert({
+          patientId: data.patientId,
+          patientName: data.patientName,
+          callId: data.callId,
+          timestamp: data.timestamp,
+        });
+      });
+    }
+
+    // Also listen for general SOS alerts (backup coverage)
+    socketRef.current.on("sos-alert", (data) => {
+      // Only show if not already showing an alert for this call
+      if (data.callId !== sosAlert?.callId) {
+        setSosAlert({
+          patientId: data.patientId,
+          patientName: data.patientName,
+          callId: data.callId,
+          timestamp: data.timestamp,
+        });
+      }
+    });
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+    };
+  }, [sosAlert?.callId]);
+
+  // Accept SOS Call
+  const acceptSOS = async () => {
+    if (!sosAlert) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      const userId = localStorage.getItem("userId");
+      const userName = localStorage.getItem("userName") || "Doctor";
+
+      // Get Stream token
+      const streamTokenRes = await fetch(
+        `${import.meta.env.VITE_API_URL}/stream/token`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ userId }),
+        }
+      );
+      const streamTokenData = await streamTokenRes.json();
+
+      setSosCallId(sosAlert.callId);
+      setSosPatientName(sosAlert.patientName);
+      setSosPatientId(sosAlert.patientId);
+      setInSOSCall(true);
+      setSosAlert(null);
+
+      // Initialize Stream Video
+      if (StreamVideo) {
+        const client = new StreamVideo(streamTokenData.apiKey, {
+          token: streamTokenData.token,
+          user: { id: userId, name: userName },
+        });
+        videoClientRef.current = client;
+
+        const call = client.call("default", sosAlert.callId);
+        callRef.current = call;
+        await call.join({ create: false });
+
+        // Enable camera and microphone
+        if (videoContainerRef.current) {
+          call.camera.enable();
+          call.microphone.enable();
+        }
+      }
+
+      // Initialize Stream Chat
+      if (StreamChat) {
+        const chatClient = StreamChat.getInstance(streamTokenData.apiKey);
+        await chatClient.connectUser(
+          { id: userId, name: userName },
+          streamTokenData.token
+        );
+        chatClientRef.current = chatClient;
+
+        const channel = chatClient.channel("messaging", sosAlert.callId, {
+          name: `Emergency Call - ${sosAlert.callId}`,
+        });
+        await channel.watch();
+
+        // Listen for messages
+        channel.on("message.new", (event) => {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: event.message.id,
+              text: event.message.text,
+              user: event.message.user.name,
+              timestamp: new Date(event.message.created_at).toLocaleTimeString(),
+            },
+          ]);
+        });
+      }
+
+      // Notify patient that doctor accepted
+      const doctorId = localStorage.getItem("doctorId");
+      socketRef.current.emit("sos-accepted", {
+        doctorId,
+        patientId: sosAlert.patientId,
+        callId: sosAlert.callId,
+      });
+    } catch (error) {
+      console.error("Accept SOS error:", error);
+    }
+  };
+
+  // Decline SOS Call
+  const declineSOS = () => {
+    if (!sosAlert) return;
+
+    const doctorId = localStorage.getItem("doctorId");
+    socketRef.current.emit("sos-declined", {
+      doctorId,
+      patientId: sosAlert.patientId,
+      callId: sosAlert.callId,
+    });
+
+    setSosAlert(null);
+  };
+
+  // End SOS Call
+  const endSOSCall = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      // End Stream call
+      if (callRef.current) {
+        await callRef.current.leave();
+      }
+
+      // Disconnect chat
+      if (chatClientRef.current) {
+        await chatClientRef.current.disconnectUser();
+      }
+
+      // Notify backend
+      if (sosCallId) {
+        await fetch(`${import.meta.env.VITE_API_URL}/stream/end-call`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ callId: sosCallId }),
+        });
+
+        // Emit end event
+        socketRef.current.emit("sos-ended", {
+          callId: sosCallId,
+          doctorId: localStorage.getItem("doctorId"),
+          patientId: sosPatientId,
+        });
+      }
+
+      setInSOSCall(false);
+      setSosCallId(null);
+      setSosPatientName("");
+      setSosPatientId(null);
+      setMessages([]);
+    } catch (error) {
+      console.error("End call error:", error);
+    }
+  };
+
+  // Send chat message
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !sosCallId) return;
+
+    try {
+      const channel = chatClientRef.current?.channel("messaging", sosCallId);
+      if (channel) {
+        await channel.sendMessage({ text: newMessage });
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now(),
+            text: newMessage,
+            user: "You",
+            timestamp: new Date().toLocaleTimeString(),
+          },
+        ]);
+        setNewMessage("");
+      }
+    } catch (error) {
+      console.error("Send message error:", error);
+    }
+  };
+
   useEffect(() => {
     setTimeout(() => {
       setStats(mockDoctorStats);
@@ -153,6 +382,145 @@ export default function DoctorDashboard() {
 
   return (
     <DoctorLayout title="Dashboard">
+      {/* SOS Alert Popup */}
+      {sosAlert && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl animate-pulse">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
+                <span className="material-symbols-outlined text-red-600 text-3xl animate-pulse">emergency</span>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-red-600">SOS Emergency Alert!</h3>
+                <p className="text-sm text-gray-500">{new Date(sosAlert.timestamp).toLocaleTimeString()}</p>
+              </div>
+            </div>
+
+            <div className="bg-red-50 rounded-xl p-4 mb-4">
+              <p className="font-bold text-gray-800 text-lg">{sosAlert.patientName}</p>
+              <p className="text-sm text-gray-600">is requesting emergency assistance</p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={acceptSOS}
+                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors"
+              >
+                <span className="material-symbols-outlined">video_call</span>
+                Join Call
+              </button>
+              <button
+                onClick={declineSOS}
+                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors"
+              >
+                <span className="material-symbols-outlined">close</span>
+                Decline
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SOS Video/Chat Modal */}
+      {inSOSCall && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="bg-[#0D7377] text-white p-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined">emergency</span>
+                <span className="font-bold">Emergency Call - {sosPatientName}</span>
+                <span className="text-sm bg-white/20 px-3 py-1 rounded-full ml-2">
+                  Call ID: {sosCallId?.slice(-8)}
+                </span>
+              </div>
+              <button
+                onClick={endSOSCall}
+                className="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-xl text-sm font-bold transition-colors flex items-center gap-2"
+              >
+                <span className="material-symbols-outlined text-sm">call_end</span>
+                End Call
+              </button>
+            </div>
+
+            {/* Video and Chat Area */}
+            <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+              {/* Video Section */}
+              <div className="flex-1 bg-gray-900 p-4">
+                <div
+                  ref={videoContainerRef}
+                  className="w-full h-full min-h-[300px] rounded-2xl bg-gray-800 flex items-center justify-center"
+                >
+                  <div className="text-center text-white/60">
+                    <span className="material-symbols-outlined text-6xl mb-2">videocam</span>
+                    <p>Video call active with {sosPatientName}</p>
+                    <p className="text-sm mt-2">Call ID: {sosCallId}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Chat Section */}
+              <div className="w-full md:w-80 bg-gray-50 border-l border-gray-200 flex flex-col">
+                <div className="p-3 bg-gray-100 border-b border-gray-200">
+                  <h4 className="font-bold text-gray-700 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[#0D7377]">chat</span>
+                    Emergency Chat
+                  </h4>
+                </div>
+
+                {/* Messages */}
+                <div
+                  ref={chatContainerRef}
+                  className="flex-1 overflow-y-auto p-3 space-y-3"
+                >
+                  {messages.length === 0 ? (
+                    <p className="text-center text-gray-400 text-sm py-8">
+                      Chat messages will appear here
+                    </p>
+                  ) : (
+                    messages.map((msg) => (
+                      <div
+                        key={msg.id}
+                        className={`p-3 rounded-xl ${
+                          msg.user === "You"
+                            ? "bg-[#0D7377] text-white ml-8"
+                            : "bg-white border border-gray-200 mr-8"
+                        }`}
+                      >
+                        <p className="text-sm">{msg.text}</p>
+                        <p className="text-xs mt-1 opacity-70">
+                          {msg.user} • {msg.timestamp}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Message Input */}
+                <div className="p-3 border-t border-gray-200 bg-white">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyPress={(e) => e.key === "Enter" && sendMessage()}
+                      placeholder="Type a message..."
+                      className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#0D7377]"
+                    />
+                    <button
+                      onClick={sendMessage}
+                      className="p-2 bg-[#0D7377] text-white rounded-xl hover:opacity-90 transition-opacity"
+                    >
+                      <span className="material-symbols-outlined text-sm">send</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-6">
 
         {/*  Welcome Banner  */}

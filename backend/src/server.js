@@ -1,9 +1,16 @@
+import { setDefaultResultOrder, setServers } from 'dns';
+setDefaultResultOrder('ipv4first');
+setServers(['8.8.8.8', '1.1.1.1']);
+
 import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import cors from "cors";
 import "dotenv/config";
 import connectDB from "./config/db.js";
+import path from "path";
+import { fileURLToPath } from "url";
+import fs from "fs";
 
 // Routes
 import authRoutes from "./routes/authRoutes.js";
@@ -13,9 +20,22 @@ import trackerRoutes from "./routes/trackerRoutes.js";
 import blogRoutes from "./routes/blogRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import callRoutes from "./routes/callRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
+import streamRoutes from "./routes/streamRoutes.js";
+import prescriptionRoutes from "./routes/prescriptionRoutes.js";
 
 // Connect MongoDB
 connectDB();
+
+// ES Module __dirname equivalent
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, '../uploads/receipts');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
 const app = express();
 const httpServer = createServer(app);
@@ -28,7 +48,10 @@ const io = new Server(httpServer, {
 });
 
 app.use(cors({ origin: process.env.CORS_ORIGIN || "http://localhost:5173" }));
-app.use(express.json());
+app.use(express.json({ limit: "5mb" }));
+
+// Serve static files for uploads
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // API Routes
 app.use("/api/auth", authRoutes);
@@ -38,6 +61,9 @@ app.use("/api/trackers", trackerRoutes);
 app.use("/api/blogs", blogRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/call", callRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/stream", streamRoutes);
+app.use("/api/prescriptions", prescriptionRoutes);
 
 app.get("/health", (_, res) => res.json({ status: "ok", db: "mongodb" }));
 
@@ -68,6 +94,50 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () =>
     console.log(`[Socket] Disconnected: ${socket.id}`),
   );
+
+  // Scheduled appointment call started by doctor
+  socket.on("call-started", (data) => {
+    const { patientId, doctorId, doctorName, appointmentId, timestamp } = data;
+    console.log(`[Socket] Doctor ${doctorId} started call for appointment ${appointmentId}`);
+
+    // Notify the patient that doctor has started the call
+    io.emit(`call-started-${patientId}`, {
+      doctorId,
+      doctorName,
+      appointmentId,
+      timestamp,
+    });
+
+    // Broadcast to all user's sockets
+    socket.broadcast.emit(`call-started-${patientId}`, {
+      doctorId,
+      doctorName,
+      appointmentId,
+      timestamp,
+    });
+  });
+
+  // Missed call notification (when patient doesn't join within time window)
+  socket.on("call-missed", (data) => {
+    const { patientId, doctorId, doctorName, appointmentId } = data;
+    console.log(`[Socket] Missed call from doctor ${doctorId} to patient ${patientId}`);
+
+    io.emit(`call-missed-${patientId}`, {
+      doctorId,
+      doctorName,
+      appointmentId,
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  // Chat message relay between patient and doctor in the same room
+  socket.on("chat-message", (data) => {
+    const { roomId, message } = data;
+    console.log(`[Socket] Chat message in room ${roomId} from ${message.senderName}`);
+
+    // Broadcast to all other clients in the room (excluding sender)
+    socket.to(roomId).emit("chat-message", { message });
+  });
 });
 
 const PORT = process.env.PORT || 3001;
