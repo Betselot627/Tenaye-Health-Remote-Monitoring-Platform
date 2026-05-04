@@ -1,9 +1,53 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   getDoctorProfile,
   subscribeDoctorProfile,
 } from "../store/doctorProfileStore";
+
+// Toast component for real-time notifications
+function Toast({ message, type = "info", onClose, action, actionLabel }) {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 5000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const colors = {
+    info: "bg-blue-600",
+    success: "bg-emerald-600",
+    warning: "bg-amber-500",
+    error: "bg-red-600",
+  };
+
+  const icons = {
+    info: "info",
+    success: "check_circle",
+    warning: "warning",
+    error: "error",
+  };
+
+  return (
+    <div className="fixed top-20 right-4 z-[100] max-w-sm">
+      <div className={`${colors[type]} text-white rounded-2xl shadow-2xl p-4 flex items-start gap-3 animate-slide-in`}>
+        <span className="material-symbols-outlined text-2xl shrink-0">{icons[type]}</span>
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-sm">{message}</p>
+          {action && (
+            <button
+              onClick={action}
+              className="mt-2 px-4 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-bold transition-colors"
+            >
+              {actionLabel || "View"}
+            </button>
+          )}
+        </div>
+        <button onClick={onClose} className="opacity-70 hover:opacity-100">
+          <span className="material-symbols-outlined">close</span>
+        </button>
+      </div>
+    </div>
+  );
+}
 
 const notifRoutes = {
   appointment: "/doctor/appointments",
@@ -24,7 +68,6 @@ const navItems = [
   { path: "/doctor/vitals", label: "Vital Alerts", icon: "monitor_heart" },
   { path: "/doctor/blogs", label: "My Blogs", icon: "article" },
   { path: "/doctor/earnings", label: "Earnings", icon: "payments" },
-  { path: "/doctor/schedule", label: "My Schedule", icon: "event_available" },
   { path: "/doctor/settings", label: "Settings", icon: "settings" },
 ];
 const mockNotifs = [
@@ -72,7 +115,7 @@ const nStyle = {
   lab: { icon: "biotech", bg: "bg-cyan-100", cl: "text-cyan-600" },
 };
 
-export default function DoctorLayout({ children, title }) {
+export default function DoctorLayout({ children, title, activeCall, onStartCall }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -81,17 +124,71 @@ export default function DoctorLayout({ children, title }) {
   const [notifs, setNotifs] = useState(mockNotifs);
   const [showProfile, setShowProfile] = useState(false);
   const [profile, setProfile] = useState(getDoctorProfile());
+  const [toast, setToast] = useState(null);
+  const socketRef = useRef(null);
+
+  // Logout handler
+  const handleLogout = () => {
+    // Remove auth tokens (customize as needed)
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    // Redirect to login
+    navigate("/auth/login");
+  };
 
   useEffect(() => {
     const u = subscribeDoctorProfile(setProfile);
     return u;
   }, []);
 
+  // Initialize Socket.io connection for real-time notifications
+  useEffect(() => {
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || "http://localhost:3001";
+    socketRef.current = window.io(socketUrl);
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+    };
+  }, []);
+
+  // Handle Start Call button click - notify patient
+  const handleStartCall = (appointmentId, patientId, patientName) => {
+    if (socketRef.current && patientId) {
+      socketRef.current.emit("call-started", {
+        patientId,
+        doctorId: localStorage.getItem("userId"),
+        doctorName: profile.name,
+        appointmentId,
+        timestamp: new Date().toISOString(),
+      });
+
+      setToast({
+        message: `Notifying ${patientName} that you've started the call...`,
+        type: "success",
+      });
+
+      // Also call the prop callback if provided
+      if (onStartCall) {
+        onStartCall(appointmentId);
+      }
+    }
+  };
+
   const unread = notifs.filter((n) => n.unread).length;
   const markRead = (id) =>
     setNotifs((p) => p.map((n) => (n.id === id ? { ...n, unread: false } : n)));
   const markAll = () =>
     setNotifs((p) => p.map((n) => ({ ...n, unread: false })));
+
+  // Expose handleStartCall via window for global access from appointment pages
+  useEffect(() => {
+    window.doctorStartCall = handleStartCall;
+    return () => {
+      delete window.doctorStartCall;
+    };
+  }, [profile.name]);
 
   const isActive = (path) =>
     path === "/doctor"
@@ -100,6 +197,17 @@ export default function DoctorLayout({ children, title }) {
 
   return (
     <div className="flex min-h-screen bg-[#f0fafa]">
+      {/* Real-time toast notifications */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          action={toast.action}
+          actionLabel={toast.actionLabel}
+          onClose={() => setToast(null)}
+        />
+      )}
+
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/40 z-40 lg:hidden"
@@ -394,6 +502,13 @@ export default function DoctorLayout({ children, title }) {
                 </div>
               )}
             </div>
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 rounded-xl bg-red-50 text-red-600 font-bold text-xs border border-red-100 hover:bg-red-100 transition-all mr-1"
+              title="Logout"
+            >
+              Logout
+            </button>
             <button
               onClick={() => setShowProfile(true)}
               className="w-9 h-9 rounded-full flex items-center justify-center text-[#083d40] font-black text-sm shadow-md hover:scale-110 transition-transform"

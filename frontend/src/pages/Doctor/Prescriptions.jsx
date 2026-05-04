@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import DoctorLayout from "./components/DoctorLayout";
-import { mockPrescriptions } from "./data/mockData";
+import { getDoctorPrescriptions, downloadPrescriptionPDF, getDoctorPatients, createPrescription } from "../../services/patientService";
 
 const statusColors = {
   active: "bg-emerald-100 text-emerald-700",
@@ -24,28 +24,44 @@ function Toast({ message, type, onClose }) {
   );
 }
 
-function NewPrescriptionModal({ onClose, onSave }) {
+function NewPrescriptionModal({ onClose, onSave, patients }) {
   const [form, setForm] = useState({
-    patient: "",
+    patientId: "",
+    patientName: "",
     medication: "",
     dosage: "",
     duration: "",
+    diagnosis: "",
+    notes: "",
   });
+
+  const handlePatientChange = (e) => {
+    const selected = patients.find(p => p._id === e.target.value);
+    setForm({
+      ...form,
+      patientId: e.target.value,
+      patientName: selected?.full_name || "",
+    });
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!form.patient || !form.medication) return;
+    if (!form.patientId || !form.medication) return;
     onSave({
-      id: `RX-${Date.now()}`,
-      ...form,
-      date: new Date().toISOString().split("T")[0],
-      status: "active",
+      patient: form.patientId,
+      medications: [{
+        name: form.medication,
+        dosage: form.dosage,
+        duration: form.duration,
+      }],
+      diagnosis: form.diagnosis,
+      notes: form.notes,
     });
   };
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-bold text-gray-800">New Prescription</h3>
           <button
@@ -58,37 +74,101 @@ function NewPrescriptionModal({ onClose, onSave }) {
           </button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {[
-            { key: "patient", label: "Patient Name", placeholder: "Full name" },
-            {
-              key: "medication",
-              label: "Medication",
-              placeholder: "e.g. Amlodipine 5mg",
-            },
-            {
-              key: "dosage",
-              label: "Dosage",
-              placeholder: "e.g. 1x daily",
-            },
-            {
-              key: "duration",
-              label: "Duration",
-              placeholder: "e.g. 30 days",
-            },
-          ].map(({ key, label, placeholder }) => (
-            <div key={key}>
-              <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">
-                {label}
-              </label>
-              <input
-                type="text"
-                placeholder={placeholder}
-                value={form[key]}
-                onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0D7377]/20"
-              />
-            </div>
-          ))}
+          {/* Patient Dropdown */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">
+              Patient
+            </label>
+            <select
+              value={form.patientId}
+              onChange={handlePatientChange}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0D7377]/20 bg-white"
+              required
+            >
+              <option value="">Select a patient...</option>
+              {patients.map((patient) => (
+                <option key={patient._id} value={patient._id}>
+                  {patient.full_name} ({patient.email})
+                </option>
+              ))}
+            </select>
+            {patients.length === 0 && (
+              <p className="text-xs text-amber-600 mt-1">
+                No patients found. You need to have at least one appointment with a patient.
+              </p>
+            )}
+          </div>
+
+          {/* Diagnosis */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">
+              Diagnosis
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Hypertension"
+              value={form.diagnosis}
+              onChange={(e) => setForm({ ...form, diagnosis: e.target.value })}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0D7377]/20"
+            />
+          </div>
+
+          {/* Medication */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">
+              Medication
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Amlodipine 5mg"
+              value={form.medication}
+              onChange={(e) => setForm({ ...form, medication: e.target.value })}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0D7377]/20"
+              required
+            />
+          </div>
+
+          {/* Dosage */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">
+              Dosage
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. 1x daily"
+              value={form.dosage}
+              onChange={(e) => setForm({ ...form, dosage: e.target.value })}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0D7377]/20"
+            />
+          </div>
+
+          {/* Duration */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">
+              Duration
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. 30 days"
+              value={form.duration}
+              onChange={(e) => setForm({ ...form, duration: e.target.value })}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0D7377]/20"
+            />
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">
+              Notes
+            </label>
+            <textarea
+              placeholder="Additional instructions..."
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0D7377]/20 resize-none"
+              rows="3"
+            />
+          </div>
           <div className="flex gap-3 pt-2">
             <button
               type="button"
@@ -112,16 +192,44 @@ function NewPrescriptionModal({ onClose, onSave }) {
 
 export default function DoctorPrescriptions() {
   const [prescriptions, setPrescriptions] = useState([]);
+  const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [toast, setToast] = useState(null);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    setTimeout(() => {
-      setPrescriptions(mockPrescriptions);
+    const fetchData = async () => {
+      const [prescriptionsResult, patientsResult] = await Promise.all([
+        getDoctorPrescriptions(),
+        getDoctorPatients(),
+      ]);
+
+      if (prescriptionsResult.data) {
+        // Transform backend data to match UI format
+        const transformed = prescriptionsResult.data.map((rx) => ({
+          id: rx._id,
+          patient: rx.patient?.full_name || "Patient",
+          patientEmail: rx.patient?.email,
+          medication: rx.medications?.[0]?.name || "Prescription",
+          dosage: rx.medications?.[0]?.dosage || "",
+          duration: rx.medications?.[0]?.duration || "",
+          status: rx.status || "active",
+          date: rx.createdAt ? new Date(rx.createdAt).toISOString().split("T")[0] : "",
+          diagnosis: rx.diagnosis,
+          notes: rx.notes,
+          allMedications: rx.medications || [],
+        }));
+        setPrescriptions(transformed);
+      }
+
+      if (patientsResult.data) {
+        setPatients(patientsResult.data);
+      }
+
       setLoading(false);
-    }, 400);
+    };
+    fetchData();
   }, []);
 
   const showToast = (message, type = "success") => {
@@ -129,10 +237,36 @@ export default function DoctorPrescriptions() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleSave = (rx) => {
-    setPrescriptions((prev) => [rx, ...prev]);
+  const handleSave = async (prescriptionData) => {
+    // Call API to save prescription
+    const result = await createPrescription(prescriptionData);
+
+    if (result.error) {
+      showToast(result.error, "error");
+      return;
+    }
+
     setShowModal(false);
-    showToast("Prescription saved successfully");
+    showToast("Prescription created and sent to patient successfully");
+
+    // Refresh prescriptions list
+    const refreshResult = await getDoctorPrescriptions();
+    if (refreshResult.data) {
+      const transformed = refreshResult.data.map((rx) => ({
+        id: rx._id,
+        patient: rx.patient?.full_name || "Patient",
+        patientEmail: rx.patient?.email,
+        medication: rx.medications?.[0]?.name || "Prescription",
+        dosage: rx.medications?.[0]?.dosage || "",
+        duration: rx.medications?.[0]?.duration || "",
+        status: rx.status || "active",
+        date: rx.createdAt ? new Date(rx.createdAt).toISOString().split("T")[0] : "",
+        diagnosis: rx.diagnosis,
+        notes: rx.notes,
+        allMedications: rx.medications || [],
+      }));
+      setPrescriptions(transformed);
+    }
   };
 
   const filtered = prescriptions.filter(
@@ -163,6 +297,7 @@ export default function DoctorPrescriptions() {
         <NewPrescriptionModal
           onClose={() => setShowModal(false)}
           onSave={handleSave}
+          patients={patients}
         />
       )}
 
@@ -201,6 +336,7 @@ export default function DoctorPrescriptions() {
                   "Duration",
                   "Date",
                   "Status",
+                  "Actions",
                 ].map((h) => (
                   <th
                     key={h}
@@ -230,6 +366,17 @@ export default function DoctorPrescriptions() {
                     >
                       {rx.status}
                     </span>
+                  </td>
+                  <td className="py-4">
+                    <button
+                      onClick={() => downloadPrescriptionPDF(rx.id)}
+                      className="p-2 text-[#0D7377] hover:bg-teal-50 rounded-lg transition-colors"
+                      title="Download PDF"
+                    >
+                      <span className="material-symbols-outlined text-lg">
+                        download
+                      </span>
+                    </button>
                   </td>
                 </tr>
               ))}

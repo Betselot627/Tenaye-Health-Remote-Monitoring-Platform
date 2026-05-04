@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import PatientLayout from "./components/PatientLayout";
-import { mockPatientAppointments } from "./data/mockData";
+import { getMyAppointments } from "../../services/patientService";
 
 // ─── Cancel confirmation modal ─────────────────────────────────────────────────
 function CancelModal({ apt, onConfirm, onClose }) {
@@ -67,14 +67,33 @@ const statusColors = {
   cancelled: "bg-red-100 text-red-700",
 };
 
+const paymentStatusColors = {
+  pending: "bg-amber-100 text-amber-700",
+  paid: "bg-emerald-100 text-emerald-700",
+  failed: "bg-red-100 text-red-700",
+  awaiting_verification: "bg-purple-100 text-purple-700",
+};
+
 const statusIcons = {
   upcoming: "schedule",
   completed: "check_circle",
   cancelled: "cancel",
 };
 
-function AppointmentDetailModal({ apt, onClose }) {
-  const navigate = useNavigate();
+function AppointmentDetailModal({ apt, onClose, onJoinCall }) {
+  const scheduledDate = new Date(apt.scheduled_at);
+  const dateStr = scheduledDate.toLocaleDateString();
+  const timeStr = scheduledDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  // Check if within allowed call window (15 min before to 30 min after scheduled time)
+  const now = new Date();
+  const callWindowStart = new Date(scheduledDate.getTime() - 15 * 60 * 1000); // 15 min before
+  const callWindowEnd = new Date(scheduledDate.getTime() + 30 * 60 * 1000); // 30 min after
+  const canJoinCall = now >= callWindowStart && now <= callWindowEnd;
+  const timeUntilCall = callWindowStart - now;
+  const isTooEarly = now < callWindowStart;
+  const isTooLate = now > callWindowEnd;
+  
   return (
     <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
@@ -94,30 +113,37 @@ function AppointmentDetailModal({ apt, onClose }) {
               </span>
             </div>
             <div>
-              <h3 className="font-black text-lg">{apt.doctor}</h3>
-              <p className="text-white/80 text-sm">{apt.specialty}</p>
+              <h3 className="font-black text-lg">{apt.doctor?.user?.full_name || 'Doctor'}</h3>
+              <p className="text-white/80 text-sm">{apt.doctor?.specialty || 'General'}</p>
             </div>
           </div>
-          <span
-            className={`mt-3 inline-flex items-center gap-1 text-xs font-bold px-3 py-1 rounded-full ${apt.status === "upcoming" ? "bg-blue-400/30 text-white" : apt.status === "completed" ? "bg-emerald-400/30 text-white" : "bg-red-400/30 text-white"}`}
-          >
-            <span className="material-symbols-outlined text-sm">
-              {statusIcons[apt.status]}
+          <div className="flex gap-2 mt-3">
+            <span
+              className={`inline-flex items-center gap-1 text-xs font-bold px-3 py-1 rounded-full ${apt.status === "upcoming" ? "bg-blue-400/30 text-white" : apt.status === "completed" ? "bg-emerald-400/30 text-white" : "bg-red-400/30 text-white"}`}
+            >
+              <span className="material-symbols-outlined text-sm">
+                {statusIcons[apt.status]}
+              </span>
+              {apt.status.charAt(0).toUpperCase() + apt.status.slice(1)}
             </span>
-            {apt.status.charAt(0).toUpperCase() + apt.status.slice(1)}
-          </span>
+            {apt.payment && (
+              <span
+                className={`inline-flex items-center gap-1 text-xs font-bold px-3 py-1 rounded-full ${paymentStatusColors[apt.payment.status] || 'bg-gray-100 text-gray-700'}`}
+              >
+                <span className="material-symbols-outlined text-sm">
+                  payments
+                </span>
+                {apt.payment.status === 'paid' ? 'Paid' : apt.payment.status === 'awaiting_verification' ? 'Pending' : apt.payment.status}
+              </span>
+            )}
+          </div>
         </div>
         <div className="p-6 space-y-3">
           {[
-            { icon: "calendar_today", label: "Date", value: apt.date },
-            {
-              icon: "schedule",
-              label: "Time",
-              value: `${apt.time} (${apt.duration})`,
-            },
-            { icon: "category", label: "Type", value: apt.type },
-            { icon: "location_on", label: "Location", value: apt.location },
-            { icon: "payments", label: "Fee", value: `${apt.fee} ETB` },
+            { icon: "calendar_today", label: "Date", value: dateStr },
+            { icon: "schedule", label: "Time", value: timeStr },
+            { icon: "payments", label: "Fee", value: `${apt.payment?.amount || apt.doctor?.consultation_fee || 0} ETB` },
+            { icon: "account_balance", label: "Payment Method", value: apt.payment?.gateway || 'N/A' },
           ].map(({ icon, label, value }) => (
             <div
               key={label}
@@ -143,21 +169,24 @@ function AppointmentDetailModal({ apt, onClose }) {
           )}
         </div>
         <div className="px-6 pb-6 flex gap-3">
-          {apt.status === "upcoming" && (
+          {apt.status === "upcoming" && apt.payment?.status === 'paid' && (
             <button
-              onClick={() => navigate(`/consultation/${apt.id}`, {
-                state: {
-                  role: "patient",
-                  appointmentId: apt.id,
-                  doctorName: apt.doctor,
-                  patientName: "Bereket Tadesse",
-                },
-              })}
-              className="flex-1 py-2.5 bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white text-sm font-bold rounded-xl hover:scale-105 transition-all shadow-lg shadow-rose-200 flex items-center justify-center gap-2">
+              onClick={() => canJoinCall && onJoinCall(apt)}
+              disabled={!canJoinCall}
+              className={`flex-1 py-2.5 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-rose-200 flex items-center justify-center gap-2 ${
+                canJoinCall
+                  ? 'bg-gradient-to-r from-[#E05C8A] to-[#F4845F] hover:scale-105'
+                  : 'bg-gray-400 cursor-not-allowed'
+              }`}
+            >
               <span className="material-symbols-outlined text-sm">
-                videocam
+                {canJoinCall ? 'videocam' : isTooEarly ? 'schedule' : 'event_busy'}
               </span>
-              Join Video Call
+              {canJoinCall
+                ? 'Join Video Call'
+                : isTooEarly
+                ? `Available at ${callWindowStart.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`
+                : 'Call Window Expired'}
             </button>
           )}
           <button
@@ -174,34 +203,86 @@ function AppointmentDetailModal({ apt, onClose }) {
 
 export default function PatientAppointments() {
   const navigate = useNavigate();
-  const [appointments, setAppointments] = useState(mockPatientAppointments);
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [selected, setSelected] = useState(null);
   const [cancelTarget, setCancelTarget] = useState(null);
   const [toast, setToast] = useState(null);
+
+  useEffect(() => {
+    fetchAppointments();
+  }, []);
+
+  const fetchAppointments = async () => {
+    setLoading(true);
+    const result = await getMyAppointments();
+    if (result.data) {
+      setAppointments(result.data);
+    }
+    setLoading(false);
+  };
 
   const filtered =
     filter === "all"
       ? appointments
       : appointments.filter((a) => a.status === filter);
 
-  const showToast = (msg, type = "success") => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 4000);
+  // Handle joining video call - only allowed at scheduled time with verified payment
+  const handleJoinCall = async (apt) => {
+    try {
+      const token = localStorage.getItem("token");
+
+      // Verify payment and appointment eligibility via backend
+      const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+      const res = await fetch(
+        `${API_BASE_URL}/api/appointments/${apt._id}/verify-call`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: "Call verification failed" }));
+        alert(errorData.message || "Unable to join call at this time. Please check your appointment time.");
+        return;
+      }
+
+      const data = await res.json();
+
+      if (data.eligible) {
+        // Navigate to video call with appointment data
+        navigate(`/consultation/${apt.video_room_id || apt._id}`, {
+          state: {
+            role: "patient",
+            appointmentId: apt._id,
+            doctorName: apt.doctor?.user?.full_name || "Doctor",
+            patientName: "Patient",
+            scheduledAt: apt.scheduled_at,
+          },
+        });
+      } else {
+        alert(data.message || "Call is not available at this time.");
+      }
+    } catch (error) {
+      console.error("Join call error:", error);
+      alert("Failed to join call. Please try again.");
+    }
   };
 
-  const handleCancelConfirm = (apt, refundEligible) => {
-    setAppointments((prev) =>
-      prev.map((a) => (a.id === apt.id ? { ...a, status: "cancelled" } : a))
+  if (loading) {
+    return (
+      <PatientLayout title="Appointments">
+        <div className="flex items-center justify-center h-64">
+          <div className="w-8 h-8 border-4 border-[#E05C8A] border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      </PatientLayout>
     );
-    setCancelTarget(null);
-    showToast(
-      refundEligible
-        ? `Appointment cancelled. ${apt.fee} ETB refund initiated.`
-        : "Appointment cancelled. No refund (within 24 hours).",
-      refundEligible ? "success" : "error"
-    );
-  };
+  }
 
   return (
     <PatientLayout title="Appointments">
@@ -259,91 +340,86 @@ export default function PatientAppointments() {
               <p className="text-gray-400 mt-3">No {filter} appointments</p>
             </div>
           ) : (
-            filtered.map((apt) => (
-              <div
-                key={apt.id}
-                className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-rose-200 transition-all duration-300 p-5 group"
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#fff5f7] to-rose-100 flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm flex-shrink-0">
-                      <span className="material-symbols-outlined text-[#E05C8A] text-xl">stethoscope</span>
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-black text-gray-800">{apt.doctor}</p>
-                        <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{apt.specialty}</span>
+            filtered.map((apt) => {
+              const scheduledDate = new Date(apt.scheduled_at);
+              const dateStr = scheduledDate.toLocaleDateString();
+              const timeStr = scheduledDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              
+              return (
+                <div
+                  key={apt._id}
+                  className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-rose-200 transition-all duration-300 p-5 group"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#fff5f7] to-rose-100 flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm flex-shrink-0">
+                        <span className="material-symbols-outlined text-[#E05C8A] text-xl">
+                          stethoscope
+                        </span>
                       </div>
-                      <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
-                        <span className="material-symbols-outlined text-xs">calendar_today</span>
-                        {apt.date} · {apt.time} · {apt.type}
-                      </p>
-                      <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
-                        <span className="material-symbols-outlined text-xs">location_on</span>
-                        {apt.location}
-                      </p>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-black text-gray-800">
+                            {apt.doctor?.user?.full_name || 'Doctor'}
+                          </p>
+                          <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                            {apt.doctor?.specialty || 'General'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                          <span className="material-symbols-outlined text-xs">
+                            calendar_today
+                          </span>
+                          {dateStr} · {timeStr}
+                        </p>
+                        {apt.payment && (
+                          <div className="flex items-center gap-1 mt-1">
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${paymentStatusColors[apt.payment.status] || 'bg-gray-100 text-gray-600'}`}>
+                              <span className="material-symbols-outlined text-xs inline-block mr-1 align-text-bottom">
+                                payments
+                              </span>
+                              {apt.payment.status === 'paid' ? 'Paid' : apt.payment.status === 'awaiting_verification' ? 'Pending Verification' : apt.payment.status}
+                            </span>
+                            <span className="text-xs text-gray-400">
+                              {apt.payment.amount} ETB
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <div className="text-right mr-1">
-                      <p className="text-sm font-black text-gray-800">{apt.fee} ETB</p>
-                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${statusColors[apt.status]}`}>
-                        {apt.status}
-                      </span>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <div className="text-right">
+                        <p className="text-sm font-black text-gray-800">
+                          {apt.payment?.amount || apt.doctor?.consultation_fee || 0} ETB
+                        </p>
+                        <span
+                          className={`text-xs font-semibold px-2.5 py-1 rounded-full ${statusColors[apt.status]}`}
+                        >
+                          {apt.status}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => setSelected(apt)}
+                        className="p-2 rounded-xl bg-gradient-to-br from-[#fff5f7] to-rose-50 text-[#E05C8A] hover:from-rose-100 transition-all hover:scale-110 border border-rose-100"
+                      >
+                        <span className="material-symbols-outlined text-lg">
+                          open_in_new
+                        </span>
+                      </button>
                     </div>
-                    {/* Join video call */}
-                    {apt.status === "upcoming" && (
-                      <button
-                        onClick={() =>
-                          navigate(`/consultation/${apt.id}`, {
-                            state: {
-                              role: "patient",
-                              appointmentId: apt.id,
-                              doctorName: apt.doctor,
-                              patientName: "Bereket Tadesse",
-                            },
-                          })
-                        }
-                        className="p-2 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all hover:scale-110 border border-emerald-100"
-                        title="Join video call"
-                      >
-                        <span className="material-symbols-outlined text-lg">videocam</span>
-                      </button>
-                    )}
-                    {/* Cancel */}
-                    {apt.status === "upcoming" && (
-                      <button
-                        onClick={() => setCancelTarget(apt)}
-                        className="p-2 rounded-xl bg-red-50 text-red-500 hover:bg-red-100 transition-all hover:scale-110 border border-red-100"
-                        title="Cancel appointment"
-                      >
-                        <span className="material-symbols-outlined text-lg">event_busy</span>
-                      </button>
-                    )}
-                    {/* View details */}
-                    <button
-                      onClick={() => setSelected(apt)}
-                      className="p-2 rounded-xl bg-gradient-to-br from-[#fff5f7] to-rose-50 text-[#E05C8A] hover:from-rose-100 transition-all hover:scale-110 border border-rose-100"
-                      title="View details"
-                    >
-                      <span className="material-symbols-outlined text-lg">open_in_new</span>
-                    </button>
                   </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
 
       {selected && (
-        <AppointmentDetailModal apt={selected} onClose={() => setSelected(null)} />
-      )}
-      {cancelTarget && (
-        <CancelModal
-          apt={cancelTarget}
-          onConfirm={handleCancelConfirm}
-          onClose={() => setCancelTarget(null)}
+        <AppointmentDetailModal
+          apt={selected}
+          onClose={() => setSelected(null)}
+          onJoinCall={handleJoinCall}
         />
       )}
     </PatientLayout>

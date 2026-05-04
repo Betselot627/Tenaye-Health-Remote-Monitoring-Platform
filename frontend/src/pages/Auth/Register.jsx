@@ -47,9 +47,7 @@ export default function Register() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Registration failed");
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data));
-      navigate("/patient");
+      navigate("/login");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -174,15 +172,16 @@ export default function Register() {
               Sign in
             </Link>
           </p>
-          <p className="text-center text-sm text-gray-400 mt-2">
+          <p className="text-center text-sm text-gray-400 mt-3">
             Are you a doctor?{" "}
             <Link
-              to="/apply-doctor"
+              to="/doctor-apply"
               className="text-[#632a7e] font-semibold hover:underline"
             >
               Apply here
             </Link>
           </p>
+        
         </div>
       </div>
     </div>

@@ -1,6 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import DoctorLayout from "./components/DoctorLayout";
+import {
+  getDoctorProfile as getDoctorProfileAPI,
+  updateDoctorProfile as updateDoctorProfileAPI,
+} from "../../services/doctorService";
 import {
   getDoctorProfile,
   updateDoctorProfile,
@@ -23,9 +27,19 @@ function Toast({ message, type = "success", onClose }) {
   );
 }
 
+const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const TIME_SLOTS = [
+  "08:00 AM", "08:30 AM", "09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM",
+  "11:00 AM", "11:30 AM", "12:00 PM", "12:30 PM", "01:00 PM", "01:30 PM",
+  "02:00 PM", "02:30 PM", "03:00 PM", "03:30 PM", "04:00 PM", "04:30 PM",
+  "05:00 PM", "05:30 PM", "06:00 PM"
+];
+
 export default function DoctorSettings() {
   const navigate = useNavigate();
   const stored = getDoctorProfile();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   const [profile, setProfile] = useState({
     name: stored.name,
@@ -36,8 +50,8 @@ export default function DoctorSettings() {
     hospital: stored.hospital,
     experience: stored.experience,
     education: stored.education,
-    consultationFee: stored.consultationFee.replace(" ETB", ""),
-    availability: stored.availability,
+    consultationFee: stored.consultationFee?.replace(" ETB", "") || "",
+    availability: [], // Array of { day, slots: [] }
     licenseNo: stored.licenseNo,
     bio: stored.bio,
   });
@@ -56,15 +70,78 @@ export default function DoctorSettings() {
   });
 
   const [toast, setToast] = useState(null);
+  const [activeDay, setActiveDay] = useState("Monday");
+
+  // Load doctor profile from API on mount
+  useEffect(() => {
+    const loadProfile = async () => {
+      const result = await getDoctorProfileAPI();
+      if (result.data) {
+        const doctor = result.data;
+        setProfile({
+          name: doctor.user?.full_name || stored.name,
+          email: doctor.user?.email || stored.email,
+          phone: doctor.user?.phone || stored.phone,
+          specialty: doctor.specialty || stored.specialty,
+          subSpecialty: doctor.sub_specialty || stored.subSpecialty,
+          hospital: doctor.hospital || stored.hospital,
+          experience: doctor.experience_years || stored.experience,
+          education: doctor.education || stored.education,
+          consultationFee: doctor.consultation_fee?.toString() || stored.consultationFee?.replace(" ETB", "") || "",
+          availability: doctor.availability || [],
+          licenseNo: doctor.license_no || stored.licenseNo,
+          bio: doctor.bio || stored.bio,
+        });
+      }
+      setLoading(false);
+    };
+    loadProfile();
+  }, []);
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleProfileSave = (e) => {
+  // Toggle a time slot for a specific day
+  const toggleSlot = (day, slot) => {
+    setProfile(prev => {
+      const existingDay = prev.availability.find(a => a.day === day);
+      let newAvailability;
+
+      if (existingDay) {
+        const hasSlot = existingDay.slots.includes(slot);
+        const newSlots = hasSlot
+          ? existingDay.slots.filter(s => s !== slot)
+          : [...existingDay.slots, slot].sort();
+
+        if (newSlots.length === 0) {
+          // Remove day if no slots
+          newAvailability = prev.availability.filter(a => a.day !== day);
+        } else {
+          newAvailability = prev.availability.map(a =>
+            a.day === day ? { ...a, slots: newSlots } : a
+          );
+        }
+      } else {
+        newAvailability = [...prev.availability, { day, slots: [slot] }];
+      }
+
+      return { ...prev, availability: newAvailability };
+    });
+  };
+
+  // Check if a slot is selected for a day
+  const isSlotSelected = (day, slot) => {
+    const daySchedule = profile.availability.find(a => a.day === day);
+    return daySchedule?.slots.includes(slot) || false;
+  };
+
+  const handleProfileSave = async (e) => {
     e.preventDefault();
-    updateDoctorProfile({
+    setSaving(true);
+
+    const result = await updateDoctorProfileAPI({
       name: profile.name,
       email: profile.email,
       phone: profile.phone,
@@ -73,12 +150,34 @@ export default function DoctorSettings() {
       hospital: profile.hospital,
       experience: profile.experience,
       education: profile.education,
-      consultationFee: `${profile.consultationFee} ETB`,
+      consultation_fee: parseInt(profile.consultationFee) || 0,
       availability: profile.availability,
-      licenseNo: profile.licenseNo,
+      license_no: profile.licenseNo,
       bio: profile.bio,
     });
-    showToast("Profile updated successfully");
+
+    setSaving(false);
+
+    if (result.error) {
+      showToast(result.error, "error");
+    } else {
+      // Also update local store for compatibility
+      updateDoctorProfile({
+        name: profile.name,
+        email: profile.email,
+        phone: profile.phone,
+        specialty: profile.specialty,
+        subSpecialty: profile.subSpecialty,
+        hospital: profile.hospital,
+        experience: profile.experience,
+        education: profile.education,
+        consultationFee: `${profile.consultationFee} ETB`,
+        availability: profile.availability,
+        licenseNo: profile.licenseNo,
+        bio: profile.bio,
+      });
+      showToast("Profile updated successfully");
+    }
   };
 
   const handlePasswordSave = (e) => {
@@ -112,6 +211,16 @@ export default function DoctorSettings() {
     .slice(0, 2)
     .join("")
     .toUpperCase();
+
+  if (loading) {
+    return (
+      <DoctorLayout title="Settings">
+        <div className="flex items-center justify-center h-64">
+          <div className="w-8 h-8 border-4 border-[#0D7377] border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      </DoctorLayout>
+    );
+  }
 
   return (
     <DoctorLayout title="Settings">
@@ -158,7 +267,6 @@ export default function DoctorSettings() {
                 { key: "experience", label: "Experience" },
                 { key: "education", label: "Education" },
                 { key: "consultationFee", label: "Consultation Fee (ETB)" },
-                { key: "availability", label: "Availability" },
                 { key: "licenseNo", label: "License No." },
               ].map(({ key, label, type = "text" }) => (
                 <div key={key}>
@@ -191,11 +299,93 @@ export default function DoctorSettings() {
             </div>
             <button
               type="submit"
-              className="px-6 py-2.5 bg-[#0D7377] text-white rounded-xl font-bold text-sm hover:bg-[#0a5c60] transition-colors"
+              disabled={saving}
+              className="px-6 py-2.5 bg-[#0D7377] text-white rounded-xl font-bold text-sm hover:bg-[#0a5c60] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              Save Changes
+              {saving && (
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              )}
+              {saving ? "Saving..." : "Save Changes"}
             </button>
           </form>
+        </div>
+
+        {/* Availability Schedule */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <h2 className="text-base font-bold text-gray-800 mb-1">
+            Availability Schedule
+          </h2>
+          <p className="text-xs text-gray-400 mb-5">
+            Select the days and time slots when you're available for appointments
+          </p>
+
+          {/* Day tabs */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {DAYS.map(day => {
+              const hasSlots = profile.availability.some(a => a.day === day && a.slots.length > 0);
+              return (
+                <button
+                  key={day}
+                  onClick={() => setActiveDay(day)}
+                  className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+                    activeDay === day
+                      ? "bg-[#0D7377] text-white"
+                      : hasSlots
+                        ? "bg-[#0D7377]/10 text-[#0D7377] border border-[#0D7377]/20"
+                        : "bg-gray-100 text-gray-600 border border-gray-200"
+                  }`}
+                >
+                  {day.slice(0, 3)}
+                  {hasSlots && <span className="ml-1">●</span>}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Time slots grid */}
+          <div className="border border-gray-200 rounded-2xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-bold text-gray-700">{activeDay}</span>
+              <span className="text-xs text-gray-400">
+                {profile.availability.find(a => a.day === activeDay)?.slots.length || 0} slots selected
+              </span>
+            </div>
+            <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-7 gap-2">
+              {TIME_SLOTS.map(slot => {
+                const selected = isSlotSelected(activeDay, slot);
+                return (
+                  <button
+                    key={slot}
+                    onClick={() => toggleSlot(activeDay, slot)}
+                    className={`py-2 px-1 rounded-lg text-xs font-semibold transition-all ${
+                      selected
+                        ? "bg-[#0D7377] text-white shadow-md"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
+                  >
+                    {slot}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Summary */}
+          <div className="mt-4 p-3 bg-gray-50 rounded-xl">
+            <p className="text-xs font-semibold text-gray-500 mb-2">Current Schedule Summary:</p>
+            {profile.availability.length === 0 ? (
+              <p className="text-xs text-gray-400">No availability set. Patients won't be able to book appointments.</p>
+            ) : (
+              <div className="space-y-1">
+                {profile.availability.sort((a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day)).map(a => (
+                  <div key={a.day} className="flex items-center gap-2 text-xs">
+                    <span className="font-medium text-gray-700 w-20">{a.day}:</span>
+                    <span className="text-gray-600">{a.slots.join(", ")}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Password */}

@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PatientLayout from "./components/PatientLayout";
-import { mockPatientPrescriptions } from "./data/mockData";
+import { getPatientPrescriptions, downloadPrescriptionPDF } from "../../services/patientService";
 
 const statusColors = {
   active: "bg-emerald-100 text-emerald-700",
@@ -8,6 +8,14 @@ const statusColors = {
 };
 
 function PrescriptionModal({ rx, onClose }) {
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    setDownloading(true);
+    await downloadPrescriptionPDF(rx.id);
+    setDownloading(false);
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
@@ -71,7 +79,17 @@ function PrescriptionModal({ rx, onClose }) {
             <p className="text-sm text-gray-700 mt-1">{rx.instructions}</p>
           </div>
         </div>
-        <div className="px-6 pb-6">
+        <div className="px-6 pb-6 space-y-3">
+          <button
+            onClick={handleDownload}
+            disabled={downloading}
+            className="w-full py-2.5 bg-[#0D7377] text-white text-sm font-bold rounded-xl hover:bg-[#0a5c60] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            <span className="material-symbols-outlined text-sm">
+              {downloading ? "downloading" : "download"}
+            </span>
+            {downloading ? "Downloading..." : "Download PDF"}
+          </button>
           <button
             onClick={onClose}
             className="w-full py-2.5 bg-gray-100 text-gray-600 text-sm font-bold rounded-xl hover:bg-gray-200 transition-all"
@@ -85,14 +103,58 @@ function PrescriptionModal({ rx, onClose }) {
 }
 
 export default function PatientPrescriptions() {
-  const [prescriptions] = useState(mockPatientPrescriptions);
+  const [prescriptions, setPrescriptions] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [selected, setSelected] = useState(null);
+
+  useEffect(() => {
+    const fetchPrescriptions = async () => {
+      const result = await getPatientPrescriptions();
+      if (result.data) {
+        // Transform backend data to match UI format
+        const transformed = result.data.map((rx) => ({
+          id: rx._id,
+          // Use first medication as primary display (or combine if multiple)
+          medication: rx.medications?.[0]?.name || "Prescription",
+          dosage: rx.medications?.[0]?.dosage || "",
+          duration: rx.medications?.[0]?.duration || "",
+          frequency: rx.medications?.[0]?.frequency || "",
+          // Show count of additional medications if more than 1
+          additionalMeds: rx.medications?.length > 1 ? `+${rx.medications.length - 1} more` : "",
+          diagnosis: rx.diagnosis,
+          notes: rx.notes,
+          status: rx.status || "active",
+          doctor: rx.doctor?.user?.full_name || "Doctor",
+          issuedDate: new Date(rx.createdAt).toLocaleDateString(),
+          expiryDate: "N/A", // Could calculate based on duration
+          refills: 0, // Not in current model, could add later
+          pharmacy: "N/A", // Not in current model
+          instructions: rx.notes || "Take as directed",
+          // Keep full medications array for modal
+          allMedications: rx.medications || [],
+        }));
+        setPrescriptions(transformed);
+      }
+      setLoading(false);
+    };
+    fetchPrescriptions();
+  }, []);
 
   const filtered =
     filter === "all"
       ? prescriptions
       : prescriptions.filter((p) => p.status === filter);
+
+  if (loading) {
+    return (
+      <PatientLayout title="Prescriptions">
+        <div className="flex items-center justify-center h-64">
+          <div className="w-8 h-8 border-4 border-[#E05C8A] border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      </PatientLayout>
+    );
+  }
 
   return (
     <PatientLayout title="Prescriptions">
@@ -149,7 +211,7 @@ export default function PatientPrescriptions() {
                   </div>
                   <div>
                     <p className="text-sm font-black text-gray-800">
-                      {rx.medication}
+                      {rx.medication} {rx.additionalMeds && <span className="text-[#E05C8A]">{rx.additionalMeds}</span>}
                     </p>
                     <p className="text-xs text-gray-500">
                       {rx.id} · {rx.doctor}
