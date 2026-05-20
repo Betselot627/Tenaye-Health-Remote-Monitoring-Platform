@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001";
+
 export default function Login() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: "", password: "" });
@@ -17,7 +19,7 @@ export default function Login() {
     }
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:3001/api/auth/login", {
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -26,6 +28,8 @@ export default function Login() {
       if (!res.ok) throw new Error(data.message || "Login failed");
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data));
+      localStorage.setItem("userId", data._id || data.id || "");
+      localStorage.setItem("userName", data.full_name || data.name || "");
       if (data.role === "admin") navigate("/admin");
       else if (data.role === "doctor") navigate("/doctor");
       else navigate("/patient");

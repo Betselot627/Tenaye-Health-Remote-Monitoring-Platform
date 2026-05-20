@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import DoctorLayout from "./components/DoctorLayout";
 import { getDoctorAppointments } from "../../services/patientService";
@@ -65,7 +65,10 @@ function ConfirmModal({ title, message, confirmLabel, onConfirm, onCancel }) {
 function AppointmentDetailModal({ apt, onClose, onStart }) {
   const scheduledDate = new Date(apt.scheduled_at);
   const dateStr = scheduledDate.toLocaleDateString();
-  const timeStr = scheduledDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const timeStr = scheduledDate.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
   // Check if within allowed call window (15 min before to 30 min after scheduled time)
   const now = new Date();
@@ -73,8 +76,8 @@ function AppointmentDetailModal({ apt, onClose, onStart }) {
   const callWindowEnd = new Date(scheduledDate.getTime() + 30 * 60 * 1000); // 30 min after
   const canStartCall = now >= callWindowStart && now <= callWindowEnd;
   const isTooEarly = now < callWindowStart;
-  const isTooLate = now > callWindowEnd;
-  
+  // isTooLate used implicitly via !canStartCall && !isTooEarly
+
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
@@ -92,18 +95,30 @@ function AppointmentDetailModal({ apt, onClose, onStart }) {
         <div className="space-y-4">
           <div className="flex items-center gap-4 p-4 bg-[#f0fafa] rounded-xl">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#0D7377] to-[#14A085] flex items-center justify-center text-white font-black text-xl shadow-lg">
-              {apt.patient?.full_name?.[0] || 'P'}
+              {apt.patient?.full_name?.[0] || "P"}
             </div>
             <div>
-              <p className="font-bold text-gray-800 text-lg">{apt.patient?.full_name || 'Patient'}</p>
-              <p className="text-sm text-gray-500">{apt.patient?.email || ''}</p>
+              <p className="font-bold text-gray-800 text-lg">
+                {apt.patient?.full_name || "Patient"}
+              </p>
+              <p className="text-sm text-gray-500">
+                {apt.patient?.email || ""}
+              </p>
             </div>
           </div>
           {[
-            { label: "Appointment ID", value: apt._id?.slice(-8) || 'N/A', icon: "tag" },
+            {
+              label: "Appointment ID",
+              value: apt._id?.slice(-8) || "N/A",
+              icon: "tag",
+            },
             { label: "Date", value: dateStr, icon: "calendar_today" },
             { label: "Time", value: timeStr, icon: "schedule" },
-            { label: "Consultation Fee", value: `${apt.payment?.amount || 0} ETB`, icon: "payments" },
+            {
+              label: "Consultation Fee",
+              value: `${apt.payment?.amount || 0} ETB`,
+              icon: "payments",
+            },
           ].map((row) => (
             <div
               key={row.label}
@@ -132,9 +147,13 @@ function AppointmentDetailModal({ apt, onClose, onStart }) {
             <div className="flex items-center justify-between py-2">
               <span className="text-gray-500 text-sm">Payment Status</span>
               <span
-                className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${paymentStatusColors[apt.payment.status] || 'bg-gray-100 text-gray-700'}`}
+                className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${paymentStatusColors[apt.payment.status] || "bg-gray-100 text-gray-700"}`}
               >
-                {apt.payment.status === 'paid' ? 'Paid' : apt.payment.status === 'awaiting_verification' ? 'Pending' : apt.payment.status}
+                {apt.payment.status === "paid"
+                  ? "Paid"
+                  : apt.payment.status === "awaiting_verification"
+                    ? "Pending"
+                    : apt.payment.status}
               </span>
             </div>
           )}
@@ -146,24 +165,28 @@ function AppointmentDetailModal({ apt, onClose, onStart }) {
           >
             Close
           </button>
-          {apt.status === "upcoming" && apt.payment?.status === 'paid' && (
+          {apt.status === "upcoming" && apt.payment?.status === "paid" && (
             <button
               onClick={() => canStartCall && onStart(apt)}
               disabled={!canStartCall}
               className={`flex-1 px-4 py-3 text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
                 canStartCall
-                  ? 'bg-gradient-to-r from-[#0D7377] to-[#14A085] hover:shadow-lg'
-                  : 'bg-gray-400 cursor-not-allowed'
+                  ? "bg-gradient-to-r from-[#0D7377] to-[#14A085] hover:shadow-lg"
+                  : "bg-gray-400 cursor-not-allowed"
               }`}
             >
               <span className="material-symbols-outlined text-sm">
-                {canStartCall ? 'videocam' : isTooEarly ? 'schedule' : 'event_busy'}
+                {canStartCall
+                  ? "videocam"
+                  : isTooEarly
+                    ? "schedule"
+                    : "event_busy"}
               </span>
               {canStartCall
-                ? 'Start Consultation'
+                ? "Start Consultation"
                 : isTooEarly
-                ? `Available at ${callWindowStart.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`
-                : 'Call Window Expired'}
+                  ? `Available at ${callWindowStart.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+                  : "Call Window Expired"}
             </button>
           )}
         </div>
@@ -181,10 +204,6 @@ export default function DoctorAppointments() {
   const [detailModal, setDetailModal] = useState(null);
   const [toast, setToast] = useState(null);
 
-  useEffect(() => {
-    fetchAppointments();
-  }, []);
-
   const fetchAppointments = async () => {
     setLoading(true);
     const result = await getDoctorAppointments();
@@ -193,6 +212,12 @@ export default function DoctorAppointments() {
     }
     setLoading(false);
   };
+
+  useEffect(() => {
+    (async () => {
+      await fetchAppointments();
+    })();
+  }, []);
 
   if (loading)
     return (
@@ -236,12 +261,17 @@ export default function DoctorAppointments() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ message: "Call verification failed" }));
-        showToast(errorData.message || "Unable to start consultation at this time.", "error");
+        const errorData = await res
+          .json()
+          .catch(() => ({ message: "Call verification failed" }));
+        showToast(
+          errorData.message || "Unable to start consultation at this time.",
+          "error",
+        );
         return;
       }
 
@@ -250,7 +280,11 @@ export default function DoctorAppointments() {
       if (data.eligible) {
         // Notify patient that doctor has started the call
         if (window.doctorStartCall && apt.patient?._id) {
-          window.doctorStartCall(apt._id, apt.patient._id, apt.patient?.full_name || "Patient");
+          window.doctorStartCall(
+            apt._id,
+            apt.patient._id,
+            apt.patient?.full_name || "Patient",
+          );
         }
 
         setDetailModal(null);
@@ -265,7 +299,10 @@ export default function DoctorAppointments() {
           },
         });
       } else {
-        showToast(data.message || "Consultation is not available at this time.", "error");
+        showToast(
+          data.message || "Consultation is not available at this time.",
+          "error",
+        );
       }
     } catch (error) {
       console.error("Start consultation error:", error);
@@ -285,7 +322,7 @@ export default function DoctorAppointments() {
       {confirmModal && (
         <ConfirmModal
           title="Cancel Appointment"
-          message={`Cancel appointment ${confirmModal.apt._id?.slice(-8) || 'N/A'} with ${confirmModal.apt.patient?.full_name || 'Patient'}? This cannot be undone.`}
+          message={`Cancel appointment ${confirmModal.apt._id?.slice(-8) || "N/A"} with ${confirmModal.apt.patient?.full_name || "Patient"}? This cannot be undone.`}
           confirmLabel="Cancel Appointment"
           onConfirm={confirmCancel}
           onCancel={() => setConfirmModal(null)}
@@ -485,3 +522,4 @@ export default function DoctorAppointments() {
     </DoctorLayout>
   );
 }
+

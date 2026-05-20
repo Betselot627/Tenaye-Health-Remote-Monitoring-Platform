@@ -1,6 +1,14 @@
 import { useState, useEffect } from "react";
 import PatientLayout from "./components/PatientLayout";
-import { getDoctors, getDoctorById, createAppointment, initiatePayment, uploadReceipt, verifyChapaPayment, getDoctorBookedSlots } from "../../services/patientService";
+import {
+  getDoctors,
+  getDoctorById,
+  createAppointment,
+  initiatePayment,
+  uploadReceipt,
+  verifyChapaPayment,
+  getDoctorBookedSlots,
+} from "../../services/patientService";
 
 const specialties = [
   "All",
@@ -54,21 +62,39 @@ function DoctorModal({ doctor: initialDoctor, onClose, onBookingSuccess }) {
 
     const fetchAvailableSlots = async () => {
       // Must have both date and availability data
-      if (!selectedDate || !doctor.availability || doctor.availability.length === 0) {
+      if (
+        !selectedDate ||
+        !doctor.availability ||
+        doctor.availability.length === 0
+      ) {
         setAvailableSlots([]);
         return;
       }
 
       // Parse date manually to avoid timezone issues
-      const [year, month, day] = selectedDate.split('-').map(Number);
+      const [year, month, day] = selectedDate.split("-").map(Number);
       const date = new Date(year, month - 1, day); // month is 0-indexed
-      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const dayNames = [
+        "Sunday",
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+      ];
       const dayName = dayNames[date.getDay()];
 
       // Find availability for the selected day
-      const dayAvailability = doctor.availability.find(a => a.day === dayName);
+      const dayAvailability = doctor.availability.find(
+        (a) => a.day === dayName,
+      );
 
-      if (!dayAvailability || !dayAvailability.slots || dayAvailability.slots.length === 0) {
+      if (
+        !dayAvailability ||
+        !dayAvailability.slots ||
+        dayAvailability.slots.length === 0
+      ) {
         setAvailableSlots([]);
         setSelectedTime("");
         return;
@@ -81,15 +107,17 @@ function DoctorModal({ doctor: initialDoctor, onClose, onBookingSuccess }) {
         const bookedSlots = bookedResult.data?.bookedSlots || [];
 
         // Filter out already booked slots
-        const available = dayAvailability.slots.filter(slot => !bookedSlots.includes(slot));
-        setAvailableSlots(prev => {
+        const available = dayAvailability.slots.filter(
+          (slot) => !bookedSlots.includes(slot),
+        );
+        setAvailableSlots((_prev) => {
           // If currently selected time is now booked, deselect it
           if (selectedTime && bookedSlots.includes(selectedTime)) {
             setSelectedTime("");
           }
           return available;
         });
-      } catch (err) {
+      } catch (_err) {
         // If booked slots API fails, show all available slots from doctor's schedule
         setAvailableSlots(dayAvailability.slots);
       }
@@ -105,11 +133,11 @@ function DoctorModal({ doctor: initialDoctor, onClose, onBookingSuccess }) {
     const handleFocus = () => {
       fetchAvailableSlots();
     };
-    window.addEventListener('focus', handleFocus);
+    window.addEventListener("focus", handleFocus);
 
     return () => {
       clearInterval(intervalId);
-      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener("focus", handleFocus);
     };
   }, [selectedDate, doctor.availability, doctor._id, doctor.id, selectedTime]);
 
@@ -117,60 +145,80 @@ function DoctorModal({ doctor: initialDoctor, onClose, onBookingSuccess }) {
     if (!selectedDate || !selectedTime) {
       return;
     }
-    
+
     if (!paymentMethod) {
-      setError('Please select a payment method');
+      setError("Please select a payment method");
       return;
     }
-    
+
     setLoading(true);
     setError("");
-    
+
     try {
       // Create appointment - convert 12-hour time to 24-hour format
       const convertTo24Hour = (time12h) => {
-        const [time, period] = time12h.split(' ');
-        let [hours, minutes] = time.split(':');
+        const [time, period] = time12h.split(" ");
+        let [hours, minutes] = time.split(":");
         hours = parseInt(hours, 10);
-        if (period === 'PM' && hours !== 12) {
+        if (period === "PM" && hours !== 12) {
           hours += 12;
-        } else if (period === 'AM' && hours === 12) {
+        } else if (period === "AM" && hours === 12) {
           hours = 0;
         }
         return { hours, minutes: parseInt(minutes, 10) };
       };
-      
+
       const { hours, minutes } = convertTo24Hour(selectedTime);
-      const [year, month, day] = selectedDate.split('-').map(Number);
-      
+      const [year, month, day] = selectedDate.split("-").map(Number);
+
       // Create date in local timezone (preserves the selected time)
       const scheduledAt = new Date(year, month - 1, day, hours, minutes);
-      
-      console.log('Creating appointment:', {
+
+      console.log("Creating appointment:", {
         doctor: doctor._id || doctor.id,
         scheduled_at: scheduledAt.toISOString(),
         localTime: selectedTime,
       });
-      
+
       const apptResult = await createAppointment({
         doctor: doctor._id || doctor.id,
         scheduled_at: scheduledAt.toISOString(),
       });
-      
+
       // Handle conflict - slot already booked
       if (apptResult.error) {
-        if (apptResult.error.includes("already been booked") || apptResult.error.includes("409")) {
-          setError("This time slot was just booked by another patient. Please select a different time.");
+        if (
+          apptResult.error.includes("already been booked") ||
+          apptResult.error.includes("409")
+        ) {
+          setError(
+            "This time slot was just booked by another patient. Please select a different time.",
+          );
           // Refresh available slots immediately
-          const bookedResult = await getDoctorBookedSlots(doctor._id || doctor.id, selectedDate);
+          const bookedResult = await getDoctorBookedSlots(
+            doctor._id || doctor.id,
+            selectedDate,
+          );
           const bookedSlots = bookedResult.data?.bookedSlots || [];
-          const [y, m, d] = selectedDate.split('-').map(Number);
+          const [y, m, d] = selectedDate.split("-").map(Number);
           const date = new Date(y, m - 1, d);
-          const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+          const dayNames = [
+            "Sunday",
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+          ];
           const dayName = dayNames[date.getDay()];
-          const dayAvailability = doctor.availability.find(a => a.day === dayName);
+          const dayAvailability = doctor.availability.find(
+            (a) => a.day === dayName,
+          );
           if (dayAvailability && dayAvailability.slots) {
-            const available = dayAvailability.slots.filter(slot => !bookedSlots.includes(slot));
+            const available = dayAvailability.slots.filter(
+              (slot) => !bookedSlots.includes(slot),
+            );
             setAvailableSlots(available);
             setSelectedTime("");
           }
@@ -179,9 +227,9 @@ function DoctorModal({ doctor: initialDoctor, onClose, onBookingSuccess }) {
         }
         throw new Error(apptResult.error);
       }
-      
+
       setAppointment(apptResult.data);
-      
+
       // Initiate payment
       const paymentResult = await initiatePayment({
         doctor: doctor._id || doctor.id,
@@ -189,69 +237,72 @@ function DoctorModal({ doctor: initialDoctor, onClose, onBookingSuccess }) {
         amount: doctor.consultation_fee || doctor.fee,
         gateway: paymentMethod,
       });
-      
+
       if (paymentResult.error) {
         setError(paymentResult.error);
         setLoading(false);
         return;
       }
-      
+
       setPayment(paymentResult.data.payment);
-      
+
       // If Chapa, redirect to payment page
-      if (paymentMethod === 'chapa') {
+      if (paymentMethod === "chapa") {
         const chapaUrl = paymentResult.data.checkout_url;
-        
+
         if (!chapaUrl) {
-          setError('Failed to get Chapa checkout URL');
+          setError("Failed to get Chapa checkout URL");
           setLoading(false);
           return;
         }
-        
+
         // Store payment info for verification after redirect
-        localStorage.setItem('pendingPayment', JSON.stringify({
-          paymentId: paymentResult.data.payment._id,
-          tx_ref: paymentResult.data.tx_ref,
-          appointmentId: apptResult.data._id,
-        }));
-        
+        localStorage.setItem(
+          "pendingPayment",
+          JSON.stringify({
+            paymentId: paymentResult.data.payment._id,
+            tx_ref: paymentResult.data.tx_ref,
+            appointmentId: apptResult.data._id,
+          }),
+        );
+
         // Redirect to Chapa checkout
-        console.log('Redirecting to:', chapaUrl);
+        console.log("Redirecting to:", chapaUrl);
         window.location.href = chapaUrl;
       } else {
         // For receipt upload, show upload form
         setShowPayment(true);
       }
-      
+
       setLoading(false);
     } catch (err) {
-      console.error('handleBook error:', err);
+      console.error("handleBook error:", err);
       setError(err.message || "Failed to book appointment");
       setLoading(false);
     }
   };
-  
+
   const handleReceiptUpload = async () => {
     if (!receiptFile) {
       setError("Please select a receipt file");
       return;
     }
-    
+
     setLoading(true);
     setError("");
-    
+
     try {
       const result = await uploadReceipt(payment._id, receiptFile);
-      
+
       if (result.error) {
         setError(result.error);
         setLoading(false);
         return;
       }
-      
+
       setBooked(true);
       setLoading(false);
-      
+
       setTimeout(() => {
         setBooked(false);
         onBookingSuccess();
@@ -262,23 +313,23 @@ function DoctorModal({ doctor: initialDoctor, onClose, onBookingSuccess }) {
       setLoading(false);
     }
   };
-  
+
   const handleVerifyChapaPayment = async () => {
     setLoading(true);
     setError("");
-    
+
     try {
       const result = await verifyChapaPayment(payment.tx_ref);
-      
+
       if (result.error) {
         setError(result.error);
         setLoading(false);
         return;
       }
-      
+
       setBooked(true);
       setLoading(false);
-      
+
       setTimeout(() => {
         setBooked(false);
         onBookingSuccess();
@@ -310,10 +361,10 @@ function DoctorModal({ doctor: initialDoctor, onClose, onBookingSuccess }) {
               </span>
             </div>
             <div>
-              <h3 className="font-black text-xl">{doctor.user?.full_name || doctor.name}</h3>
-              <p className="text-white/80 text-sm">
-                {doctor.specialty}
-              </p>
+              <h3 className="font-black text-xl">
+                {doctor.user?.full_name || doctor.name}
+              </h3>
+              <p className="text-white/80 text-sm">{doctor.specialty}</p>
               <div className="flex items-center gap-2 mt-1">
                 <div className="flex items-center gap-0.5">
                   {[...Array(5)].map((_, i) => (
@@ -327,7 +378,11 @@ function DoctorModal({ doctor: initialDoctor, onClose, onBookingSuccess }) {
                   ))}
                 </div>
                 <span className="text-white/80 text-xs">
-                  {doctor.rating} ({doctor.years_experience ? `${doctor.years_experience} yrs exp` : 'Experienced'})
+                  {doctor.rating} (
+                  {doctor.years_experience
+                    ? `${doctor.years_experience} yrs exp`
+                    : "Experienced"}
+                  )
                 </span>
               </div>
             </div>
@@ -352,8 +407,8 @@ function DoctorModal({ doctor: initialDoctor, onClose, onBookingSuccess }) {
           ) : showPayment ? (
             <div className="space-y-4">
               <h4 className="font-bold text-gray-800">Complete Payment</h4>
-              
-              {paymentMethod === 'receipt_upload' ? (
+
+              {paymentMethod === "receipt_upload" ? (
                 <div>
                   <p className="text-sm text-gray-600 mb-3">
                     Upload your payment receipt to complete the booking.
@@ -374,7 +429,9 @@ function DoctorModal({ doctor: initialDoctor, onClose, onBookingSuccess }) {
                         upload_file
                       </span>
                       <p className="text-sm text-gray-600 mt-2">
-                        {receiptFile ? receiptFile.name : "Click to upload receipt"}
+                        {receiptFile
+                          ? receiptFile.name
+                          : "Click to upload receipt"}
                       </p>
                       <p className="text-xs text-gray-400 mt-1">
                         JPEG, PNG, or PDF (max 5MB)
@@ -391,7 +448,8 @@ function DoctorModal({ doctor: initialDoctor, onClose, onBookingSuccess }) {
                     Complete your payment via Chapa to confirm the booking.
                   </p>
                   <div className="p-3 bg-amber-50 rounded-xl border border-amber-100 text-xs text-amber-700 mb-3">
-                    <span className="font-bold">Transaction Reference:</span> {payment?.tx_ref}
+                    <span className="font-bold">Transaction Reference:</span>{" "}
+                    {payment?.tx_ref}
                   </div>
                   <p className="text-xs text-gray-500 mb-3">
                     After completing payment, click the button below to verify.
@@ -405,14 +463,17 @@ function DoctorModal({ doctor: initialDoctor, onClose, onBookingSuccess }) {
           ) : !showBooking ? (
             <>
               <p className="text-sm text-gray-600 leading-relaxed">
-                {doctor.bio || "Experienced healthcare professional dedicated to providing quality patient care."}
+                {doctor.bio ||
+                  "Experienced healthcare professional dedicated to providing quality patient care."}
               </p>
               <div className="grid grid-cols-2 gap-3">
                 {[
                   {
                     icon: "work_history",
                     label: "Experience",
-                    value: doctor.years_experience ? `${doctor.years_experience} Years` : 'Experienced',
+                    value: doctor.years_experience
+                      ? `${doctor.years_experience} Years`
+                      : "Experienced",
                   },
                   {
                     icon: "payments",
@@ -422,12 +483,12 @@ function DoctorModal({ doctor: initialDoctor, onClose, onBookingSuccess }) {
                   {
                     icon: "local_hospital",
                     label: "Hospital",
-                    value: doctor.hospital || 'Available',
+                    value: doctor.hospital || "Available",
                   },
                   {
                     icon: "verified",
                     label: "Status",
-                    value: doctor.is_verified ? 'Verified' : 'Pending',
+                    value: doctor.is_verified ? "Verified" : "Pending",
                   },
                 ].map(({ icon, label, value }) => (
                   <div key={label} className="p-3 bg-[#fff5f7]/40 rounded-xl">
@@ -459,14 +520,28 @@ function DoctorModal({ doctor: initialDoctor, onClose, onBookingSuccess }) {
                   Time Slot
                 </label>
                 {!selectedDate ? (
-                  <p className="text-sm text-gray-400 mt-2">Please select a date first</p>
+                  <p className="text-sm text-gray-400 mt-2">
+                    Please select a date first
+                  </p>
                 ) : availableSlots.length === 0 ? (
                   <p className="text-sm text-amber-600 mt-2">
                     {(() => {
-                      const [y, m, d] = selectedDate.split('-').map(Number);
+                      const [y, m, d] = selectedDate.split("-").map(Number);
                       const dt = new Date(y, m - 1, d);
-                      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-                      return doctor.availability?.find(a => a.day === days[dt.getDay()])?.slots?.length > 0;
+                      const days = [
+                        "Sunday",
+                        "Monday",
+                        "Tuesday",
+                        "Wednesday",
+                        "Thursday",
+                        "Friday",
+                        "Saturday",
+                      ];
+                      return (
+                        doctor.availability?.find(
+                          (a) => a.day === days[dt.getDay()],
+                        )?.slots?.length > 0
+                      );
                     })()
                       ? "All slots are already booked for this day"
                       : "No available slots for this day"}
@@ -486,9 +561,11 @@ function DoctorModal({ doctor: initialDoctor, onClose, onBookingSuccess }) {
                 )}
               </div>
               <div className="p-3 bg-amber-50 rounded-xl border border-amber-100 text-xs text-amber-700">
-                <span className="font-bold">Fee: {doctor.consultation_fee || doctor.fee} ETB</span>
+                <span className="font-bold">
+                  Fee: {doctor.consultation_fee || doctor.fee} ETB
+                </span>
               </div>
-              
+
               <div>
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">
                   Payment Method
@@ -496,15 +573,15 @@ function DoctorModal({ doctor: initialDoctor, onClose, onBookingSuccess }) {
                 <div className="grid grid-cols-2 gap-2 mt-1">
                   <button
                     type="button"
-                    onClick={() => setPaymentMethod('chapa')}
-                    className={`py-2 text-xs font-bold rounded-xl border transition-all ${paymentMethod === 'chapa' ? 'bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white border-transparent' : 'border-gray-200 text-gray-600 hover:border-rose-300'}`}
+                    onClick={() => setPaymentMethod("chapa")}
+                    className={`py-2 text-xs font-bold rounded-xl border transition-all ${paymentMethod === "chapa" ? "bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white border-transparent" : "border-gray-200 text-gray-600 hover:border-rose-300"}`}
                   >
                     Chapa (Online)
                   </button>
                   <button
                     type="button"
-                    onClick={() => setPaymentMethod('receipt_upload')}
-                    className={`py-2 text-xs font-bold rounded-xl border transition-all ${paymentMethod === 'receipt_upload' ? 'bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white border-transparent' : 'border-gray-200 text-gray-600 hover:border-rose-300'}`}
+                    onClick={() => setPaymentMethod("receipt_upload")}
+                    className={`py-2 text-xs font-bold rounded-xl border transition-all ${paymentMethod === "receipt_upload" ? "bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white border-transparent" : "border-gray-200 text-gray-600 hover:border-rose-300"}`}
                   >
                     Upload Receipt
                   </button>
@@ -537,7 +614,9 @@ function DoctorModal({ doctor: initialDoctor, onClose, onBookingSuccess }) {
             <>
               <button
                 onClick={handleBook}
-                disabled={!selectedDate || !selectedTime || !paymentMethod || loading}
+                disabled={
+                  !selectedDate || !selectedTime || !paymentMethod || loading
+                }
                 className="flex-1 py-2.5 bg-gradient-to-r from-[#E05C8A] to-[#F4845F] text-white text-sm font-bold rounded-xl hover:scale-105 transition-all shadow-lg shadow-rose-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
                 {loading ? "Processing..." : "Continue to Payment"}
@@ -552,7 +631,7 @@ function DoctorModal({ doctor: initialDoctor, onClose, onBookingSuccess }) {
             </>
           ) : (
             <>
-              {paymentMethod === 'receipt_upload' ? (
+              {paymentMethod === "receipt_upload" ? (
                 <>
                   <button
                     onClick={handleReceiptUpload}
@@ -594,11 +673,7 @@ export default function PatientDoctors() {
   const [search, setSearch] = useState("");
   const [specialty, setSpecialty] = useState("All");
   const [selected, setSelected] = useState(null);
-  
-  useEffect(() => {
-    fetchDoctors();
-  }, []);
-  
+
   const fetchDoctors = async () => {
     setLoading(true);
     const filters = {};
@@ -608,18 +683,24 @@ export default function PatientDoctors() {
     if (search) {
       filters.search = search;
     }
-    
+
     const result = await getDoctors(filters);
     if (result.data) {
       setDoctors(result.data);
     }
     setLoading(false);
   };
-  
+
   useEffect(() => {
     fetchDoctors();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    fetchDoctors();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [specialty, search]);
-  
+
   const handleBookingSuccess = () => {
     fetchDoctors();
   };
@@ -716,7 +797,11 @@ export default function PatientDoctors() {
                         </span>
                       ))}
                       <span className="text-xs text-gray-400 ml-1">
-                        {doc.rating} ({doc.years_experience ? `${doc.years_experience} yrs exp` : 'Experienced'})
+                        {doc.rating} (
+                        {doc.years_experience
+                          ? `${doc.years_experience} yrs exp`
+                          : "Experienced"}
+                        )
                       </span>
                     </div>
                   </div>
@@ -727,7 +812,9 @@ export default function PatientDoctors() {
                     <span className="material-symbols-outlined text-sm text-[#E05C8A]">
                       work_history
                     </span>
-                    {doc.years_experience ? `${doc.years_experience} Years` : 'Experienced'}
+                    {doc.years_experience
+                      ? `${doc.years_experience} Years`
+                      : "Experienced"}
                   </div>
                   <div className="flex items-center gap-1.5 text-gray-500">
                     <span className="material-symbols-outlined text-sm text-[#E05C8A]">
@@ -739,7 +826,9 @@ export default function PatientDoctors() {
                     <span className="material-symbols-outlined text-sm text-[#E05C8A]">
                       local_hospital
                     </span>
-                    <span className="truncate">{doc.hospital || 'Available'}</span>
+                    <span className="truncate">
+                      {doc.hospital || "Available"}
+                    </span>
                   </div>
                 </div>
 
@@ -767,9 +856,9 @@ export default function PatientDoctors() {
       </div>
 
       {selected && (
-        <DoctorModal 
-          doctor={selected} 
-          onClose={() => setSelected(null)} 
+        <DoctorModal
+          doctor={selected}
+          onClose={() => setSelected(null)}
           onBookingSuccess={handleBookingSuccess}
         />
       )}
