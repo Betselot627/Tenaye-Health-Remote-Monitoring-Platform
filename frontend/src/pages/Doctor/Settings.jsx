@@ -189,7 +189,7 @@ export default function DoctorSettings() {
     if (result.error) {
       showToast(result.error, "error");
     } else {
-      // Also update local store for compatibility
+      // Update store (persists to localStorage.doctorProfile)
       updateDoctorProfile({
         name: profile.name,
         email: profile.email,
@@ -204,6 +204,14 @@ export default function DoctorSettings() {
         licenseNo: profile.licenseNo,
         bio: profile.bio,
       });
+      // Also update localStorage.user so name persists after re-login
+      try {
+        const stored = JSON.parse(localStorage.getItem("user") || "{}");
+        localStorage.setItem(
+          "user",
+          JSON.stringify({ ...stored, full_name: profile.name }),
+        );
+      } catch {}
       showToast("Profile updated successfully");
     }
   };

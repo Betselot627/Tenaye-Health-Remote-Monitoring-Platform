@@ -1,11 +1,18 @@
 // Simple pub/sub store for doctor profile — shared between Settings and DoctorLayout
 import { mockDoctorProfile } from "../data/mockData";
 
-// Try to load saved profile from localStorage first
+// Try to load saved profile from localStorage first, then fall back to logged-in user, then mock
 function loadInitialState() {
   try {
     const saved = localStorage.getItem("doctorProfile");
     if (saved) return JSON.parse(saved);
+  } catch {}
+  // Fall back to the logged-in user's name from login response
+  try {
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    if (user.full_name) {
+      return { ...mockDoctorProfile, name: user.full_name };
+    }
   } catch {}
   return null;
 }
