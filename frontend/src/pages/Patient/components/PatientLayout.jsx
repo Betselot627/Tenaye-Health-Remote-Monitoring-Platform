@@ -97,6 +97,7 @@ export default function PatientLayout({ children, title }) {
   const [showNotifs, setShowNotifs] = useState(false);
   const [notifs, setNotifs] = useState(mockPatientNotifications);
   const [toast, setToast] = useState(null);
+  const [userName, setUserName] = useState("");
   const socketRef = useRef(null);
 
   const handleLogout = () => {
@@ -123,6 +124,10 @@ export default function PatientLayout({ children, title }) {
 
   // Initialize Socket.io connection for real-time notifications
   useEffect(() => {
+    // Get user name from localStorage
+    const storedUserName = localStorage.getItem("userName") || "Patient";
+    setUserName(storedUserName);
+
     const socketUrl = import.meta.env.VITE_SOCKET_URL || "http://localhost:3001";
     socketRef.current = window.io(socketUrl);
     const userId = localStorage.getItem("userId");
@@ -249,7 +254,7 @@ export default function PatientLayout({ children, title }) {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-gray-800 truncate">
-                Bereket Tadesse
+                {userName}
               </p>
               <p className="text-xs text-gray-400">Patient</p>
             </div>
