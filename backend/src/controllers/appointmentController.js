@@ -6,8 +6,11 @@ export const createAppointment = async (req, res) => {
   try {
     const { doctor, scheduled_at } = req.body;
 
-    // Parse the scheduled_at string directly to preserve local time
-    // The date comes in ISO format with timezone offset (e.g., 2026-05-03T09:00:00.000+01:00)
+    // TIMEZONE HANDLING:
+    // The frontend sends scheduled_at as ISO string (e.g., "2026-05-21T14:00:00.000Z")
+    // This is already in UTC, so we parse it directly
+    // MongoDB stores it as UTC, and all comparisons use UTC timestamps
+    // The frontend displays times using toLocaleTimeString() which converts to user's local timezone
     const scheduledDate = new Date(scheduled_at);
     const startOfDay = new Date(scheduledDate);
     startOfDay.setHours(0, 0, 0, 0);
@@ -193,7 +196,7 @@ export const verifyCallEligibility = async (req, res) => {
     }
 
     // Check appointment time window (15 min before to 30 min after scheduled time)
-    // Convert both times to UTC for consistent comparison
+    // All times are in UTC for consistent comparison across timezones
     const scheduledTime = new Date(appointment.scheduled_at);
     const now = new Date();
     
@@ -204,10 +207,12 @@ export const verifyCallEligibility = async (req, res) => {
     const callWindowEndMs = scheduledTimeMs + 30 * 60 * 1000; // 30 min after
 
     if (nowMs < callWindowStartMs) {
-      const minsUntilStart = Math.ceil((callWindowStartMs - nowMs) / 60000);
+      // Calculate how many minutes UNTIL the call window opens (not "before")
+      const minsUntilCallAvailable = Math.ceil((callWindowStartMs - nowMs) / 60000);
       return res.status(403).json({
-        message: `Call will be available ${minsUntilStart} minutes before the scheduled time.`,
+        message: `Call will be available in ${minsUntilCallAvailable} minutes (15 minutes before scheduled time).`,
         eligible: false,
+        minutesUntilAvailable: minsUntilCallAvailable,
         callWindowStart: new Date(callWindowStartMs).toISOString(),
         callWindowEnd: new Date(callWindowEndMs).toISOString(),
         currentTime: now.toISOString(),

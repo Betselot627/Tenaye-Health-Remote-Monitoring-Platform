@@ -28,13 +28,16 @@ function AppointmentDetailModal({ apt, onClose, onJoinCall }) {
   const timeStr = scheduledDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   // Check if within allowed call window (15 min before to 30 min after scheduled time)
+  // Use UTC timestamps for consistent comparison
   const now = new Date();
-  const callWindowStart = new Date(scheduledDate.getTime() - 15 * 60 * 1000); // 15 min before
-  const callWindowEnd = new Date(scheduledDate.getTime() + 30 * 60 * 1000); // 30 min after
-  const canJoinCall = now >= callWindowStart && now <= callWindowEnd;
-  const timeUntilCall = callWindowStart - now;
-  const isTooEarly = now < callWindowStart;
-  const isTooLate = now > callWindowEnd;
+  const scheduledTimeMs = scheduledDate.getTime();
+  const nowMs = now.getTime();
+  const callWindowStartMs = scheduledTimeMs - 15 * 60 * 1000; // 15 min before
+  const callWindowEndMs = scheduledTimeMs + 30 * 60 * 1000; // 30 min after
+  const canJoinCall = nowMs >= callWindowStartMs && nowMs <= callWindowEndMs;
+  const minutesUntilCall = Math.ceil((callWindowStartMs - nowMs) / 60000);
+  const isTooEarly = nowMs < callWindowStartMs;
+  const isTooLate = nowMs > callWindowEndMs;
   
   return (
     <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
@@ -127,7 +130,7 @@ function AppointmentDetailModal({ apt, onClose, onJoinCall }) {
               {canJoinCall
                 ? 'Join Video Call'
                 : isTooEarly
-                ? `Available at ${callWindowStart.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`
+                ? `Available in ${minutesUntilCall} min`
                 : 'Call Window Expired'}
             </button>
           )}
