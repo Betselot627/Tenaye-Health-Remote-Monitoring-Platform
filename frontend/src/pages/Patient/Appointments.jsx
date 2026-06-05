@@ -27,17 +27,12 @@ function AppointmentDetailModal({ apt, onClose, onJoinCall }) {
   const dateStr = scheduledDate.toLocaleDateString();
   const timeStr = scheduledDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-  // Check if within allowed call window (15 min before to 30 min after scheduled time)
-  // Use UTC timestamps for consistent comparison
-  const now = new Date();
-  const scheduledTimeMs = scheduledDate.getTime();
-  const nowMs = now.getTime();
-  const callWindowStartMs = scheduledTimeMs - 15 * 60 * 1000; // 15 min before
-  const callWindowEndMs = scheduledTimeMs + 30 * 60 * 1000; // 30 min after
-  const canJoinCall = nowMs >= callWindowStartMs && nowMs <= callWindowEndMs;
-  const minutesUntilCall = Math.ceil((callWindowStartMs - nowMs) / 60000);
-  const isTooEarly = nowMs < callWindowStartMs;
-  const isTooLate = nowMs > callWindowEndMs;
+  // DEMO MODE: Allow joining call anytime for presentation
+  // In production, you would check time windows here
+  const canJoinCall = true; // Always allow for demo
+  const minutesUntilCall = 0;
+  const isTooEarly = false;
+  const isTooLate = false;
   
   return (
     <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
@@ -199,7 +194,8 @@ export default function PatientAppointments() {
 
       if (data.eligible) {
         // Navigate to video call with appointment data
-        navigate(`/consultation/${apt.video_room_id || apt._id}`, {
+        // ALWAYS use appointment._id as room to ensure both users join same room
+        navigate(`/consultation/${apt._id}`, {
           state: {
             role: "patient",
             appointmentId: apt._id,

@@ -99,7 +99,7 @@ function PatientDetailModal({ patient, onClose }) {
                 {
                   label: "Allergies",
                   value:
-                    patient.allergies.length > 0
+                    patient.allergies && patient.allergies.length > 0
                       ? patient.allergies.join(", ")
                       : "None reported",
                 },
@@ -163,7 +163,7 @@ function PatientDetailModal({ patient, onClose }) {
 
           {tab === "prescriptions" && (
             <div className="space-y-3">
-              {patient.prescriptions.length === 0 ? (
+              {!patient.prescriptions || patient.prescriptions.length === 0 ? (
                 <p className="text-center text-gray-400 text-sm py-8">
                   No prescriptions on record.
                 </p>
@@ -199,7 +199,7 @@ function PatientDetailModal({ patient, onClose }) {
 
           {tab === "labs" && (
             <div className="space-y-3">
-              {patient.labOrders.length === 0 ? (
+              {!patient.labOrders || patient.labOrders.length === 0 ? (
                 <p className="text-center text-gray-400 text-sm py-8">
                   No lab orders on record.
                 </p>

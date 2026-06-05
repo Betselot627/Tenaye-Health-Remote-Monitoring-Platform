@@ -18,6 +18,7 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { io } from "socket.io-client";
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:3001";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 const STUN = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 
 // ─── rPPG heart-rate estimator (runs on main thread for simplicity) ───────────
@@ -197,8 +198,24 @@ export default function VideoCall() {
         socketRef.current = socket;
 
         socket.on("connect", () => {
-          console.log("[VideoCall] Socket connected:", socket.id);
+          console.log("[VideoCall] Socket connected:", socket.id, "| Room:", roomId, "| Role:", role);
         });
+
+        // Register chat message listener immediately after socket setup
+        socket.on("chat-message", ({ message }) => {
+          console.log("[VideoCall] Received chat message from", message.senderName, ":", message.text);
+          // Add to local state (show on left side for receiver)
+          setMessages((prev) => [...prev, { ...message, sender: "other" }]);
+
+          // Increment unread if chat is closed
+          setChatOpen((currentChatOpen) => {
+            if (!currentChatOpen) {
+              setUnreadCount((prev) => prev + 1);
+            }
+            return currentChatOpen;
+          });
+        });
+        console.log("[VideoCall] Chat message listener registered for role:", role);
 
         // 3. Create peer connection
         const pc = new RTCPeerConnection(STUN);
@@ -238,15 +255,24 @@ export default function VideoCall() {
         socket.on("user-joined", async (peerId) => {
           console.log("[VideoCall] User joined:", peerId);
           setRemoteJoined(true);
-          // Caller creates offer
-          const offer = await pc.createOffer();
-          await pc.setLocalDescription(offer);
-          socket.emit("offer", { roomId, offer });
-          console.log("[VideoCall] Offer sent");
+          // Only the first person in the room creates the offer
+          // Use socket ID comparison to determine who creates offer
+          if (socket.id < peerId) {
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            socket.emit("offer", { roomId, offer });
+            console.log("[VideoCall] Offer sent (I'm the caller)");
+          } else {
+            console.log("[VideoCall] Waiting for offer (I'm the receiver)");
+          }
         });
 
         socket.on("offer", async ({ offer }) => {
           console.log("[VideoCall] Offer received");
+          if (pc.signalingState !== "stable") {
+            console.log("[VideoCall] Ignoring offer - already in signaling");
+            return;
+          }
           await pc.setRemoteDescription(new RTCSessionDescription(offer));
           const answer = await pc.createAnswer();
           await pc.setLocalDescription(answer);
@@ -256,6 +282,10 @@ export default function VideoCall() {
 
         socket.on("answer", async ({ answer }) => {
           console.log("[VideoCall] Answer received");
+          if (pc.signalingState !== "have-local-offer") {
+            console.log("[VideoCall] Ignoring answer - wrong state:", pc.signalingState);
+            return;
+          }
           await pc.setRemoteDescription(new RTCSessionDescription(answer));
         });
 
@@ -343,14 +373,24 @@ export default function VideoCall() {
 
   // ── Submit prescription ──
   const submitPrescription = async () => {
-    if (!appointmentId) return;
+    if (!appointmentId) {
+      alert("No appointment ID found");
+      return;
+    }
 
     setSavingPrescription(true);
     try {
       const token = localStorage.getItem("token");
       const patientId = state?.patientId;
 
-      const res = await fetch(`${SOCKET_URL}/api/prescriptions`, {
+      console.log("[VideoCall] Saving prescription:", {
+        patientId,
+        appointmentId,
+        medicationCount: prescriptionData.medications.filter(m => m.name.trim()).length,
+        diagnosis: prescriptionData.diagnosis,
+      });
+
+      const res = await fetch(`${API_BASE_URL}/api/prescriptions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -365,17 +405,22 @@ export default function VideoCall() {
         }),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        throw new Error("Failed to save prescription");
+        console.error("[VideoCall] Prescription save failed:", data);
+        throw new Error(data.message || "Failed to save prescription");
       }
+
+      console.log("[VideoCall] Prescription saved successfully:", data);
 
       // Close modal and navigate
       setShowPrescription(false);
       socketRef.current?.disconnect();
       navigate("/doctor/appointments", { state: { callEnded: true, duration: callDuration, prescriptionSaved: true } });
     } catch (error) {
-      console.error("Save prescription error:", error);
-      alert("Failed to save prescription. Please try again.");
+      console.error("[VideoCall] Save prescription error:", error);
+      alert(`Failed to save prescription: ${error.message}`);
     } finally {
       setSavingPrescription(false);
     }
@@ -408,7 +453,7 @@ export default function VideoCall() {
       time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     };
 
-    console.log("[VideoCall] Sending chat message:", msg);
+    console.log("[VideoCall] Sending chat message to room:", roomId, "message:", msg);
 
     // Emit to other peer via socket
     socketRef.current.emit("chat-message", {
@@ -420,30 +465,6 @@ export default function VideoCall() {
     setMessages((prev) => [...prev, { ...msg, sender: "me" }]);
     setChatInput("");
   };
-
-  // Listen for incoming chat messages
-  useEffect(() => {
-    if (!socketRef.current) return;
-
-    const handleChatMessage = ({ message }) => {
-      console.log("[VideoCall] Received chat message:", message);
-      // Add to local state (show on left side for receiver)
-      setMessages((prev) => [...prev, { ...message, sender: "other" }]);
-
-      // Increment unread if chat is closed
-      setUnreadCount((prev) => {
-        if (!chatOpen) return prev + 1;
-        return prev;
-      });
-    };
-
-    socketRef.current.on("chat-message", handleChatMessage);
-    console.log("[VideoCall] Chat message listener registered");
-
-    return () => {
-      socketRef.current?.off("chat-message", handleChatMessage);
-    };
-  }, [chatOpen]);
 
   const openChat = () => { setChatOpen(true); setUnreadCount(0); };
 

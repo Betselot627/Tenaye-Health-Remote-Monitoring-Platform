@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"path": "../../../../../../astu_stem/Smart-Complaint-Issue-Tracking-System"
+		},
+		{
+			"path": "../../../../../../../../Downloads/stitch/stitch"
+		},
+		{
+			"path": "../../../.."
+		},
+		{
+			"path": "../../../../../../sol"
+		}
+	],
+	"settings": {
+		"liveServer.settings.multiRootWorkspaceName": "stitch",
+		"typescript.autoClosingTags": false
+	}
+}

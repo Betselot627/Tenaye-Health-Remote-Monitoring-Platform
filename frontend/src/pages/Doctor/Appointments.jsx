@@ -70,16 +70,11 @@ function AppointmentDetailModal({ apt, onClose, onStart }) {
     minute: "2-digit",
   });
 
-  // Check if within allowed call window (15 min before to 30 min after scheduled time)
-  // Use UTC timestamps for consistent comparison
-  const now = new Date();
-  const scheduledTimeMs = scheduledDate.getTime();
-  const nowMs = now.getTime();
-  const callWindowStartMs = scheduledTimeMs - 15 * 60 * 1000; // 15 min before
-  const callWindowEndMs = scheduledTimeMs + 30 * 60 * 1000; // 30 min after
-  const canStartCall = nowMs >= callWindowStartMs && nowMs <= callWindowEndMs;
-  const minutesUntilCall = Math.ceil((callWindowStartMs - nowMs) / 60000);
-  const isTooEarly = nowMs < callWindowStartMs;
+  // DEMO MODE: Allow starting call anytime for presentation
+  // In production, you would check time windows here
+  const canStartCall = true; // Always allow for demo
+  const minutesUntilCall = 0;
+  const isTooEarly = false;
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -291,7 +286,8 @@ export default function DoctorAppointments() {
         }
 
         setDetailModal(null);
-        navigate(`/consultation/${apt.video_room_id || apt._id}`, {
+        // ALWAYS use appointment._id as room to ensure both users join same room
+        navigate(`/consultation/${apt._id}`, {
           state: {
             role: "doctor",
             appointmentId: apt._id,

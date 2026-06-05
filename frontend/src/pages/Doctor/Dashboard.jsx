@@ -117,6 +117,9 @@ export default function DoctorDashboard() {
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [counters, setCounters] = useState({ patients: 0, appointmentsToday: 0, labOrders: 0, earnings: 0 });
+  
+  // Get doctor name from localStorage
+  const doctorName = localStorage.getItem("userName") || "Doctor";
 
   // SOS Emergency State
   const [sosAlert, setSosAlert] = useState(null);
@@ -489,7 +492,7 @@ export default function DoctorDashboard() {
                       >
                         <p className="text-sm">{msg.text}</p>
                         <p className="text-xs mt-1 opacity-70">
-                          {msg.user} • {msg.timestamp}
+                          {msg.user} ï¿½ {msg.timestamp}
                         </p>
                       </div>
                     ))

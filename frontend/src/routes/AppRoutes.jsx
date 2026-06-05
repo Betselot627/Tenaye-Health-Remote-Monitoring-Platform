@@ -315,7 +315,7 @@ export default function AppRoutes() {
       />
       <Route path="/payment/success" element={<PaymentSuccess />} />
       <Route path="/payment/failed" element={<PaymentFailed />} />
-      <Route path="/consultation/:roomId" element={<P><StreamVideoCall /></P>} />
+      <Route path="/consultation/:roomId" element={<P><VideoCall /></P>} />
 
       {/* ── 404 ── */}
       <Route path="*" element={<Navigate to="/home" replace />} />

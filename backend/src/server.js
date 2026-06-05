@@ -94,6 +94,7 @@ io.on("connection", (socket) => {
 
   socket.on("join-room", (roomId) => {
     socket.join(roomId);
+    console.log(`[Socket] ${socket.id} joined room ${roomId}`);
     socket.to(roomId).emit("user-joined", socket.id);
   });
 
@@ -158,8 +159,10 @@ io.on("connection", (socket) => {
   // Chat message relay between patient and doctor in the same room
   socket.on("chat-message", (data) => {
     const { roomId, message } = data;
+    const roomSockets = io.sockets.adapter.rooms.get(roomId);
+    const clientCount = roomSockets ? roomSockets.size : 0;
     console.log(
-      `[Socket] Chat message in room ${roomId} from ${message.senderName}`,
+      `[Socket] Chat message in room ${roomId} from ${message.senderName} | ${clientCount} clients in room`,
     );
 
     // Broadcast to all other clients in the room (excluding sender)
